@@ -1,5 +1,4 @@
 using TradeCopilot.Service;
-using Microsoft.Extensions.Hosting.WindowsServices;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddWindowsService(options =>
