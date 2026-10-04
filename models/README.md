@@ -46,3 +46,32 @@ ONNX path activates automatically once a supported tokenizer loader exists.
 Download qwen2.5-3b-instruct-q4_k_m.gguf from
 https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF
 Place at models/qwen2.5-3b-instruct-q4_k_m.gguf (~2.0 GB).
+
+## ASR — ggml-medium.bin
+
+Expected by `WhisperSpeechRecognizer` (default path `models/ggml-medium.bin`).
+
+- Download from https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin
+  (~1.5 GB, GGML format; not the `ggml-*.bin` from another repo).
+- `Whisper.net.Runtime` 1.9.1 supplies the native `whisper.dll` / `ggml-*.dll` binaries,
+  so no separate native build is needed.
+- Recognition is pinned to `WithLanguage("hi")` with beam size 5 and a trading-domain
+  prompt, so transcripts come back in mixed Roman/Devanagari script.
+- When the model is absent, the recognizer logs a warning, stays disabled, and
+  `TranscribeAsync` returns an empty string; the pipeline keeps running.
+
+## TTS (Piper)
+
+`PiperSpeechSynthesizer` shells out to `piper.exe` and plays the generated WAV.
+
+- Download `piper_windows_amd64.zip` from
+  https://github.com/rhasspy/piper/releases and extract `piper.exe` to `tools/piper/`
+  (see tools/README.md).
+- Download the voice from https://huggingface.co/rhasspy/piper-voices:
+  - `hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx`
+  - `hi/hi_IN/rohan/medium/hi_IN-rohan-medium.onnx.json`
+
+  → `models/piper/`
+- Text is transliterated Roman→Devanagari by `HinglishTransliterator` before synthesis,
+  and written to the process as UTF-8.
+- When either file is missing, the synthesizer logs instructions and stays disabled.

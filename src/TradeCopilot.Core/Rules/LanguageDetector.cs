@@ -68,6 +68,12 @@ public static class LanguageDetector
         "rupaye", "sakta", "sakti", "chahiye", "kitna", "kaise", "kab", "kahan",
     ];
 
+    /// <summary>
+    /// The Hinglish marker vocabulary, exposed read-only so other components
+    /// (for example the speech transliterator) can reuse it instead of duplicating it.
+    /// </summary>
+    internal static IReadOnlyList<string> HinglishMarkerVocabulary => HinglishMarkerWords;
+
     private static readonly Regex HinglishMarkers = new(
         @"\b(?:" + string.Join('|', HinglishMarkerWords) + @")\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);

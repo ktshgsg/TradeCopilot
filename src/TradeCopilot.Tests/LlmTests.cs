@@ -147,7 +147,12 @@ public sealed class LlmTests
         const string expected =
             "You are TradeCopilot, an expert trading assistant for Indian retail traders.\n\n"
             + "RULES:\n"
-            + "1. Respond in the SAME language the user asked in. If the user writes in Hindi or Hinglish, respond in Hinglish (Roman script preferred, Devanagari acceptable). If English, respond in English.\n"
+            + "1. Respond in the SAME language AND script the user asked in.\n"
+            + "   - English query -> English response (Latin script).\n"
+            + "   - Devanagari Hindi/Hinglish query -> Devanagari response.\n"
+            + "   - Roman-script Hinglish query -> Roman-script Hinglish response.\n"
+            + "   Technical terms (RSI, MACD, support, resistance, breakout) stay in\n"
+            + "   Latin script in all cases.\n"
             + "2. Keep answers under 3 sentences unless asked for detail.\n"
             + "3. Cite exact numbers from the chart context.\n"
             + "4. Never invent indicator values. If not provided, say you can't see it.\n"
@@ -155,6 +160,20 @@ public sealed class LlmTests
             + "6. Never give financial advice as a promise of returns.";
 
         PromptBuilder.BuildSystemPrompt().Should().Be(expected);
+    }
+
+    /// <summary>The system prompt requires matching both language and script, per Task 4.</summary>
+    [Fact]
+    public void BuildSystemPrompt_RequiresSameLanguageAndScript()
+    {
+        string prompt = PromptBuilder.BuildSystemPrompt();
+
+        prompt.Should().Contain("SAME language AND script");
+        prompt.Should().Contain("English query -> English response (Latin script).");
+        prompt.Should().Contain("Devanagari Hindi/Hinglish query -> Devanagari response.");
+        prompt.Should().Contain("Roman-script Hinglish query -> Roman-script Hinglish response.");
+        prompt.Should().Contain("Technical terms (RSI, MACD, support, resistance, breakout) stay in");
+        prompt.Should().NotContain("Roman script preferred");
     }
 
     /// <summary>With the model present, a Hinglish query yields numbers plus Hinglish markers.</summary>
