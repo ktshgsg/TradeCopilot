@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Ocr;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Core.Processing;
 
@@ -15,7 +16,7 @@ public sealed class FrameProcessor : IAsyncDisposable
     private readonly Channel<FrameData> _channel;
     private readonly FrameGate _gate;
     private readonly IOcrEngine _ocr;
-    private readonly Func<FrameData, CancellationToken, Task<IReadOnlyList<PatternDetection>>> _detectPatterns;
+    private readonly IChartPatternDetector _patternDetector;
     private readonly ILogger<FrameProcessor> _log;
     private const int ChannelCapacity = 5;
     private readonly CancellationTokenSource _cts = new();
@@ -26,17 +27,17 @@ public sealed class FrameProcessor : IAsyncDisposable
     /// <summary>Creates a processor with a DropOldest channel of capacity 5.</summary>
     /// <param name="gate">Duplicate-frame gate.</param>
     /// <param name="ocr">OCR engine.</param>
-    /// <param name="detectPatterns">Pattern detector (Task 2 provides the real one).</param>
+    /// <param name="patternDetector">Pattern detector (defaults to disabled).</param>
     /// <param name="logger">Logger (defaults to null logger).</param>
     public FrameProcessor(
         FrameGate gate,
         IOcrEngine ocr,
-        Func<FrameData, CancellationToken, Task<IReadOnlyList<PatternDetection>>>? detectPatterns = null,
+        IChartPatternDetector? patternDetector = null,
         ILogger<FrameProcessor>? logger = null)
     {
         _gate = gate ?? throw new ArgumentNullException(nameof(gate));
         _ocr = ocr ?? throw new ArgumentNullException(nameof(ocr));
-        _detectPatterns = detectPatterns ?? (static (FrameData _, CancellationToken _) => Task.FromResult<IReadOnlyList<PatternDetection>>(Array.Empty<PatternDetection>()));
+        _patternDetector = patternDetector ?? DisabledChartPatternDetector.Instance;
         _log = logger ?? NullLogger<FrameProcessor>.Instance;
         _channel = Channel.CreateBounded<FrameData>(new BoundedChannelOptions(ChannelCapacity)
         {
@@ -117,10 +118,12 @@ public sealed class FrameProcessor : IAsyncDisposable
                     continue;
                 }
 
-                Task<OcrResult> ocrTask = _ocr.RecognizeAsync(frame, _cts.Token);
-                Task<IReadOnlyList<PatternDetection>> patternTask = _detectPatterns(frame, _cts.Token);
+                Task<OcrResult> ocrTask;
+                Task<IReadOnlyList<PatternDetection>> patternTask;
                 try
                 {
+                    ocrTask = _ocr.RecognizeAsync(frame, _cts.Token);
+                    patternTask = _patternDetector.DetectAsync(frame, _cts.Token);
                     await Task.WhenAll(ocrTask, patternTask).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)

@@ -6,6 +6,7 @@ using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Ocr;
 using TradeCopilot.Core.Processing;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Tests;
 
@@ -149,11 +150,11 @@ public sealed class CaptureTests
     public void ChartContextHash_SameInput_SameHash_PriceChange_DifferentHash()
     {
         var ocr = new OcrResult("EURUSD 1.0850 Bull Flag", [], "en-US");
-        var patterns = new List<PatternDetection> { new("bull_flag", 0.82) };
+        var patterns = new List<PatternDetection> { new("bull_flag", 0.82f, new Rect(0, 0, 100, 50)) };
         string h1 = ChartContextHash.Compute(ocr, patterns);
         string h2 = ChartContextHash.Compute(
             new OcrResult("  eurusd   1.0850  BULL flag!!! ", [], "en-US"),
-            new List<PatternDetection> { new("bull_flag", 0.85) });
+            new List<PatternDetection> { new("bull_flag", 0.85f, new Rect(10, 10, 90, 40)) });
         h1.Should().Be(h2);
         h1.Should().HaveLength(16);
 

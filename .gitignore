@@ -491,5 +491,6 @@ $RECYCLE.BIN/
 
 # Keep empty dirs in fresh clones
 !models/.gitkeep
+!models/README.md
 !data/.gitkeep
 !tools/.gitkeep

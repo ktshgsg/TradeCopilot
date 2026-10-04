@@ -38,4 +38,9 @@
     <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test project exercises internal decode/letterbox helpers directly. -->
+    <InternalsVisibleTo Include="TradeCopilot.Tests" />
+  </ItemGroup>
 </Project>

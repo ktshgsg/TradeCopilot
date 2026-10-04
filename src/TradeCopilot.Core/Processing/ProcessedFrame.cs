@@ -1,5 +1,6 @@
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Ocr;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Core.Processing;
 
@@ -8,7 +9,7 @@ namespace TradeCopilot.Core.Processing;
 /// </summary>
 /// <param name="Frame">Source frame.</param>
 /// <param name="Ocr">Recognized text.</param>
-/// <param name="Patterns">Detected chart patterns (empty until Task 2).</param>
+/// <param name="Patterns">Detected chart patterns (empty when detection is disabled).</param>
 /// <param name="ProcessedAt">UTC time processing finished.</param>
 public sealed record ProcessedFrame(
     FrameData Frame,

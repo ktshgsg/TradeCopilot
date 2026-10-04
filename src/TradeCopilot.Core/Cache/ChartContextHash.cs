@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using TradeCopilot.Core.Ocr;
-using TradeCopilot.Core.Processing;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Core.Cache;
 
