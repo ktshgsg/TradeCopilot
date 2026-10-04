@@ -488,6 +488,8 @@ $RECYCLE.BIN/
 /models/*
 /data/*
 /tools/*
+# ...but keep markdown docs under tools/ (e.g. tools/README.md) tracked
+!tools/*.md
 
 # Keep empty dirs in fresh clones
 !models/.gitkeep
