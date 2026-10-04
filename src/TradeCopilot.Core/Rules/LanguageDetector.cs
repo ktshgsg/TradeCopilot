@@ -16,8 +16,60 @@ public static class LanguageDetector
 {
     private const int MinHinglishMarkers = 2;
 
+    /// <summary>
+    /// Roman-script Hindi (Hinglish) vocabulary, matched case-insensitively as whole words
+    /// and grouped by role for readability. Only whole words count, so "hoga" never matches
+    /// inside "hogi" or "hogaya".
+    /// </summary>
+    private static readonly string[] HinglishMarkerWords =
+    [
+        // Question words, connectives and discourse markers.
+        "kya", "kyunki", "kyun", "kyu", "matlab", "lekin", "magar", "isliye", "toh", "phir",
+        "baad", "baat", "aur",
+
+        // Pronouns, possessives, quantifiers and postpositions.
+        "mera", "meri", "tera", "teri", "uska", "uski", "unka", "unki", "apna", "apni",
+        "apne", "khud", "mujhe", "tujhe", "tumhe", "sab", "sabhi", "sabse", "sabko", "koi",
+        "kuch", "wala", "wali", "wale", "walo", "ka", "ki", "ke", "ko", "mein", "pe", "par",
+
+        // Copula and auxiliaries (all person/number/gender forms of "ho" and "hona").
+        "hai", "hain", "ho", "hua", "hui", "hue", "hona", "hone", "hota", "hoti", "hote",
+        "hoga", "hogi", "hoge", "hongi", "raha", "rahi", "rahe", "rahega", "rahegi",
+        "rahunga", "rahungi", "nahi", "haan",
+
+        // Forms of address.
+        "bhai", "yaar",
+
+        // Action verbs.
+        "kar", "karo", "karna", "karne", "karta", "karti", "karte", "karenge", "karunga",
+        "karungi", "dekh", "dekho", "dekha", "dekhna", "dekhta", "dekhti", "soch", "socho",
+        "sochna", "bata", "batao", "bataye", "rakh", "rakho", "rakhna", "chalo", "chal",
+        "chalta", "chalti", "chalna", "tod", "toda", "todna", "lagana", "lagao", "banao",
+        "bana", "banega", "banegi", "banenge", "khareed", "khareedna", "bech", "beko",
+        "becho", "bikna", "samajh", "samjho",
+
+        // Participles and predicative adjectives.
+        "lag", "laga", "lagta", "lagti", "lagte", "lagne", "milega", "milegi", "mila",
+        "mili", "dikh", "dikhata",
+
+        // Evaluation, hedges and intensity.
+        "acha", "accha", "achha", "theek", "thik", "sahi", "galat", "badhiya", "mast",
+        "shandar", "jugaad", "sach", "sachchi", "mushkil", "aasan", "shayad", "zarur",
+        "zaroor", "bilkul", "pakka", "pakki",
+
+        // Degree, time and urgency.
+        "jaldi", "abhi", "ab", "thoda", "thodi", "bahut", "bohot", "zyada", "kam", "waqt",
+
+        // Place and direction.
+        "upar", "neeche", "andar", "bahar", "aage", "pichle", "peeche", "samne",
+
+        // Attention, lifecycle and finance nouns.
+        "dhyan", "dhyaan", "shuru", "khatam", "paisa", "paise", "lakh", "crore", "rupay",
+        "rupaye", "sakta", "sakti", "chahiye", "kitna", "kaise", "kab", "kahan",
+    ];
+
     private static readonly Regex HinglishMarkers = new(
-        @"\b(?:kya|hai|hain|mein|pe|par|ka|ki|ke|ko|karo|kar|batao|bata|nahi|haan|dikh|raha|rahi|rahe|koi|sakta|sakti|hoga|thik|theek|accha|achha|chahiye|kitna|kaise|kab|kahan)\b",
+        @"\b(?:" + string.Join('|', HinglishMarkerWords) + @")\b",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>

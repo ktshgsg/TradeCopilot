@@ -245,11 +245,63 @@ public sealed class RuleEngineTests
     [InlineData("", Language.En)]
     [InlineData("What is RSI?", Language.En)]
     [InlineData("only batao", Language.En)]
+    [InlineData("The market looks strong today, should I buy?", Language.En)]
     [InlineData("batao kitna hai?", Language.Hinglish)]
+    [InlineData("bhai, support break ho gaya, ab kya karo?", Language.Hinglish)]
+    [InlineData("MACD neeche cross hua, milega kya?", Language.Hinglish)]
     [InlineData("RSI क्या है?", Language.Hinglish)]
     [InlineData("ओवरबॉट हो गया", Language.Hi)]
     public void LanguageDetector_Classifies(string text, Language expected) =>
         LanguageDetector.Detect(text).Should().Be(expected);
+
+    /// <summary>Roman-script Hindi vocabulary added after the initial 30-word dictionary.</summary>
+    public static TheoryData<string> ExpandedVocabulary => BuildExpandedVocabulary();
+
+    private static TheoryData<string> BuildExpandedVocabulary() => new()
+    {
+        // Prioritized additions: bhai, samajh, lag-family, mile-ga/-gi, ho-ga/-gi, kar-forms.
+        "bhai", "samajh", "samjho", "lag", "laga", "lagta", "lagti", "lagte", "lagne",
+        "milega", "milegi", "mila", "mili", "hoga", "hogi", "hoge", "hongi", "karne",
+        "karta", "karti", "karte", "karna", "karenge", "karunga", "karungi",
+
+        // Copula and auxiliary forms.
+        "ho", "hua", "hui", "hue", "hona", "hone", "hota", "hoti", "hote", "rahega",
+        "rahegi", "rahunga", "rahungi",
+
+        // Pronouns, possessives and quantifiers.
+        "yaar", "mera", "meri", "tera", "teri", "uska", "uski", "unka", "unki", "apna",
+        "apni", "apne", "khud", "mujhe", "tujhe", "tumhe", "sab", "sabhi", "sabse",
+        "sabko", "kuch", "wala", "wali", "wale", "walo",
+
+        // Connectives and discourse markers.
+        "kyunki", "kyun", "kyu", "matlab", "lekin", "magar", "isliye", "toh", "phir",
+        "baad", "baat", "aur",
+
+        // Action verbs.
+        "dekh", "dekho", "dekha", "dekhna", "dekhta", "dekhti", "soch", "socho", "sochna",
+        "bataye", "rakh", "rakho", "rakhna", "chalo", "chal", "chalta", "chalti", "chalna",
+        "tod", "toda", "todna", "lagana", "lagao", "banao", "bana", "banega", "banegi",
+        "banenge", "khareed", "khareedna", "bech", "beko", "becho", "bikna",
+
+        // Hedges, evaluation, degree and time.
+        "acha", "sahi", "galat", "badhiya", "mast", "shandar", "jugaad", "sach", "sachchi",
+        "mushkil", "aasan", "shayad", "zarur", "zaroor", "bilkul", "pakka", "pakki", "jaldi",
+        "abhi", "ab", "thoda", "thodi", "bahut", "bohot", "zyada", "kam", "waqt",
+
+        // Place, direction, attention and finance nouns.
+        "upar", "neeche", "andar", "bahar", "aage", "pichle", "peeche", "samne", "dhyan",
+        "dhyaan", "shuru", "khatam", "paisa", "paise", "lakh", "crore", "rupay", "rupaye",
+        "dikhata",
+    };
+
+    /// <summary>Every added marker counts: alone it stays below the two-marker threshold, paired it is Hinglish.</summary>
+    [Theory]
+    [MemberData(nameof(ExpandedVocabulary))]
+    public void LanguageDetector_CountsExpandedVocabulary(string word)
+    {
+        LanguageDetector.Detect(word).Should().Be(Language.En);
+        LanguageDetector.Detect($"{word} kya?").Should().Be(Language.Hinglish);
+    }
 
     /// <summary>One routing-corpus row: query, OCR text, pattern context, and expectations.</summary>
     public sealed record RoutingCase(
