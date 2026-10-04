@@ -7,7 +7,7 @@ using D3D11MapFlags = Vortice.Direct3D11.MapFlags;
 
 namespace TradeCopilot.Core.Capture;
 
-public sealed partial class DxgiScreenCapture
+public sealed partial class DxgiScreenCapture : IScreenCapture
 {
     private void CaptureLoop(CancellationToken ct)
     {

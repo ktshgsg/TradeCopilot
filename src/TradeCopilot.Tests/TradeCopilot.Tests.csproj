@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
+    <!-- Integration tests exercise PipeServer and AgentOptions. -->
+    <ProjectReference Include="..\TradeCopilot.Service\TradeCopilot.Service.csproj" />
   </ItemGroup>
 
 </Project>
