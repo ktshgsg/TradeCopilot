@@ -7,24 +7,20 @@
     <PackageVersion Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageVersion Include="Vortice.DXGI" Version="3.8.3" />
     <PackageVersion Include="Vortice.D3DCompiler" Version="3.8.3" />
-
     <!-- OCR / Vision -->
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
-
     <!-- Storage -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
-
     <!-- LLM -->
     <PackageVersion Include="LLamaSharp" Version="0.27.0" />
     <PackageVersion Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
-
     <!-- Speech -->
     <PackageVersion Include="Whisper.net" Version="1.9.1" />
     <PackageVersion Include="Whisper.net.Runtime" Version="1.9.1" />
-    <PackageVersion Include="NAudio" Version="2.4.0" /> <!-- latest stable with net8.0 support; 3.x requires net9.0 -->
-
+    <PackageVersion Include="NAudio" Version="2.4.0" />
+    <!-- latest stable with net8.0 support; 3.x requires net9.0 -->
     <!-- Cross-cutting -->
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
@@ -32,16 +28,14 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
     <PackageVersion Include="System.Threading.Channels" Version="10.0.12" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
-
     <!-- Hosting -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
-
     <!-- UI -->
-    <PackageVersion Include="H.NotifyIcon.Wpf" Version="2.3.2" /> <!-- latest stable with net8.0-windows assets; 2.4.1 targets net10.0-windows only -->
+    <PackageVersion Include="H.NotifyIcon.Wpf" Version="2.3.2" />
+    <!-- latest stable with net8.0-windows assets; 2.4.1 targets net10.0-windows only -->
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
-
     <!-- Tests -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
@@ -49,5 +43,7 @@
     <PackageVersion Include="coverlet.collector" Version="10.1.0" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
+    <!-- Test-only image synthesis (pinned; tests target net8.0-windows only) -->
+    <PackageVersion Include="System.Drawing.Common" Version="8.0.31" />
   </ItemGroup>
 </Project>
