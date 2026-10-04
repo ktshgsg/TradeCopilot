@@ -40,3 +40,9 @@ Current status: Microsoft.ML.Tokenizers 2.0.0 has no factory for a generic
 HuggingFace `tokenizer.json`, so the provider logs a warning and serves the
 deterministic `FakeEmbeddingProvider` fallback (`UsesFallback == true`). The
 ONNX path activates automatically once a supported tokenizer loader exists.
+
+## LLM
+
+Download qwen2.5-3b-instruct-q4_k_m.gguf from
+https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF
+Place at models/qwen2.5-3b-instruct-q4_k_m.gguf (~2.0 GB).
