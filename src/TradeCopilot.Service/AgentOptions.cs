@@ -1,5 +1,7 @@
 using TradeCopilot.Core.Capture;
 
+using TradeCopilot.Core.Privacy;
+
 namespace TradeCopilot.Service;
 
 /// <summary>Typed root of <c>appsettings.json</c>.</summary>
@@ -16,6 +18,9 @@ public sealed class AgentOptions
 
     /// <summary>Named-pipe settings.</summary>
     public PipeOptions Pipe { get; set; } = new();
+
+    /// <summary>Privacy gate settings.</summary>
+    public PrivacyOptions Privacy { get; set; } = new();
 }
 
 /// <summary>Desktop region and frame rate to capture.</summary>

@@ -5,6 +5,7 @@ using TradeCopilot.Core.Embeddings;
 using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Ocr;
 using TradeCopilot.Core.Orchestrator;
+using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Processing;
 using TradeCopilot.Core.Rules;
 using TradeCopilot.Core.Speech;
@@ -58,6 +59,11 @@ builder.Services.AddSingleton<ISpeechSynthesizer>(sp => new PiperSpeechSynthesiz
     sp.GetRequiredService<ILogger<PiperSpeechSynthesizer>>()));
 builder.Services.AddSingleton<AudioCapture>(sp => new AudioCapture(
     sp.GetRequiredService<ILogger<AudioCapture>>()));
+
+builder.Services.AddSingleton<IWindowFilter>(_ => new WindowFilter());
+builder.Services.AddSingleton<IAuditSink>(_ => NoopAuditSink.Instance);
+builder.Services.AddSingleton(sp => sp.GetRequiredService<AgentOptions>().Privacy);
+builder.Services.AddSingleton<PrivacyGateCounters>();
 
 builder.Services.AddSingleton<FrameProcessor>(sp => new FrameProcessor(
     sp.GetRequiredService<FrameGate>(),

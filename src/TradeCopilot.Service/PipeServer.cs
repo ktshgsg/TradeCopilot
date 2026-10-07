@@ -2,6 +2,7 @@ using System.IO.Pipes;
 using System.Text;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Orchestrator;
+using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Speech;
 using TradeCopilot.Service.Protocol;
 
@@ -29,6 +30,7 @@ public sealed class PipeServer : BackgroundService
     private readonly IScreenCapture _capture;
     private readonly ISpeechRecognizer _asr;
     private readonly AgentOptions _opts;
+    private readonly PrivacyGateCounters? _counters;
     private readonly ILogger<PipeServer> _log;
     private readonly DateTimeOffset _startedAt = DateTimeOffset.UtcNow;
     private int _connectionSeq;
@@ -39,6 +41,7 @@ public sealed class PipeServer : BackgroundService
     /// <param name="capture">Screen capture, for status and pause/resume.</param>
     /// <param name="asr">Speech recognizer, for the transcribe command.</param>
     /// <param name="opts">Service options.</param>
+    /// <param name="counters">Privacy exclusion counters (optional).</param>
     /// <param name="log">Logger.</param>
     public PipeServer(
         AgentOrchestrator orch,
@@ -46,7 +49,8 @@ public sealed class PipeServer : BackgroundService
         IScreenCapture capture,
         ISpeechRecognizer asr,
         AgentOptions opts,
-        ILogger<PipeServer> log)
+        ILogger<PipeServer> log,
+        PrivacyGateCounters? counters = null)
     {
         ArgumentNullException.ThrowIfNull(orch);
         ArgumentNullException.ThrowIfNull(state);
@@ -59,6 +63,7 @@ public sealed class PipeServer : BackgroundService
         _capture = capture;
         _asr = asr;
         _opts = opts;
+        _counters = counters;
         _log = log;
     }
 
@@ -201,6 +206,8 @@ public sealed class PipeServer : BackgroundService
             Type = "status",
             CaptureActive = _capture.IsCapturing,
             FramesProcessed = snapshot.FramesProcessed,
+            FramesExcludedByWindow = _counters?.ExcludedByWindow,
+            FramesExcludedBySensitive = _counters?.ExcludedBySensitive,
             UptimeSec = uptime,
             Version = ServiceVersion,
         };

@@ -75,6 +75,12 @@ public sealed record PipeResponse
     /// <summary>Frames folded into the agent state.</summary>
     public long? FramesProcessed { get; init; }
 
+    /// <summary>Frames dropped before OCR because the window title was excluded.</summary>
+    public long? FramesExcludedByWindow { get; init; }
+
+    /// <summary>Frames dropped after OCR because the content was sensitive.</summary>
+    public long? FramesExcludedBySensitive { get; init; }
+
     /// <summary>Seconds since the service started.</summary>
     public long? UptimeSec { get; init; }
 

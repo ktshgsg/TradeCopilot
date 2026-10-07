@@ -4,6 +4,7 @@ using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Orchestrator;
+using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Processing;
 using TradeCopilot.Core.Speech;
 
@@ -30,6 +31,10 @@ public sealed class StartupHostedService : IHostedService
     private readonly AudioCapture _audio;
     private readonly FrameProcessor _frameProcessor;
     private readonly AgentOptions _opts;
+    private readonly IWindowFilter _windowFilter;
+    private readonly IAuditSink _audit;
+    private readonly PrivacyOptions _privacy;
+    private readonly PrivacyGateCounters _counters;
     private readonly ILogger<StartupHostedService> _log;
 
     private EventHandler<FrameData>? _frameHandler;
@@ -47,6 +52,10 @@ public sealed class StartupHostedService : IHostedService
     /// <param name="audio">Microphone capture, disposed on shutdown.</param>
     /// <param name="frameProcessor">Frame processing pipeline.</param>
     /// <param name="opts">Service options.</param>
+    /// <param name="windowFilter">Foreground-window exclusion filter.</param>
+    /// <param name="audit">Content-free audit sink.</param>
+    /// <param name="privacy">Privacy gate options.</param>
+    /// <param name="counters">Shared privacy exclusion counters.</param>
     /// <param name="log">Logger.</param>
     public StartupHostedService(
         ISemanticCache cache,
@@ -59,7 +68,11 @@ public sealed class StartupHostedService : IHostedService
         AudioCapture audio,
         FrameProcessor frameProcessor,
         AgentOptions opts,
-        ILogger<StartupHostedService> log)
+        ILogger<StartupHostedService> log,
+        IWindowFilter? windowFilter = null,
+        IAuditSink? audit = null,
+        PrivacyOptions? privacy = null,
+        PrivacyGateCounters? counters = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(llm);
@@ -83,6 +96,10 @@ public sealed class StartupHostedService : IHostedService
         _frameProcessor = frameProcessor;
         _opts = opts;
         _log = log;
+        _windowFilter = windowFilter ?? new WindowFilter();
+        _audit = audit ?? NoopAuditSink.Instance;
+        _privacy = privacy ?? opts.Privacy;
+        _counters = counters ?? new PrivacyGateCounters();
     }
 
     /// <summary>Service version reported in the startup log.</summary>
@@ -134,6 +151,13 @@ public sealed class StartupHostedService : IHostedService
 
     /// <summary>True once capture has been started and not yet stopped.</summary>
     public bool Started => _started;
+
+    /// <summary>Frames dropped before OCR because the window title was excluded.</summary>
+    public long FramesExcludedByWindow => _counters.ExcludedByWindow;
+
+    /// <summary>Frames dropped after OCR because the content was sensitive.</summary>
+    public long FramesExcludedBySensitive => _counters.ExcludedBySensitive;
+
 
     /// <summary>
     /// Initializes every engine in parallel. Each engine is isolated so a missing model
@@ -234,8 +258,49 @@ public sealed class StartupHostedService : IHostedService
 
     private void WirePipeline()
     {
-        _frameHandler = (_, frame) => _frameProcessor.Post(frame);
-        _processedHandler = (_, processed) => _state.Update(processed.Ocr, processed.Patterns);
+        _frameHandler = (_, frame) =>
+        {
+            try
+            {
+                if (_windowFilter.IsExcluded(_privacy.ExclusionPatterns))
+                {
+                    _counters.IncrementWindow();
+                    _audit.Write("SensitiveSkipped", "reason=window_title");
+                    _log.LogDebug("Frame dropped: foreground window is excluded.");
+                    return; // do NOT call frameProcessor.Post
+                }
+
+                _frameProcessor.Post(frame);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.LogError(ex, "Gate 1 failed; dropping frame.");
+            }
+        };
+        _processedHandler = (_, processed) =>
+        {
+            try
+            {
+                // Gate 2 MUST run before state.Update: once sensitive OCR reaches
+                // AgentState it will be sent to the LLM on the next query.
+                if (_privacy.PauseOnSensitive)
+                {
+                    string title = _windowFilter.GetForegroundWindowTitle();
+                    if (SensitiveDetector.IsSensitive(processed.Ocr.FullText, title))
+                    {
+                        _counters.IncrementSensitive();
+                        _audit.Write("SensitiveSkipped", "reason=ocr_content");
+                        return; // do NOT call state.Update
+                    }
+                }
+
+                _state.Update(processed.Ocr, processed.Patterns);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.LogError(ex, "Gate 2 failed; skipping frame.");
+            }
+        };
         _capture.OnFrameCaptured += _frameHandler;
         _frameProcessor.OnProcessed += _processedHandler;
     }
