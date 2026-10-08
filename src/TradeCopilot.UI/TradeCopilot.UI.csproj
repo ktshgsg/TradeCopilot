@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
+    <ProjectReference Include="..\TradeCopilot.UI.Logic\TradeCopilot.UI.Logic.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -20,6 +20,14 @@
     <!-- Dependency injection / generic host -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
