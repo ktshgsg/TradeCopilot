@@ -164,8 +164,7 @@ public sealed class PrivacyGateTests
             await service.StopAsync(CancellationToken.None);
         }
 
-        audit.Writes.Should().ContainSingle()
-            .Which.Should().Be(("SensitiveSkipped", "reason=window_title"));
+        audit.Writes.Should().Contain(("SensitiveSkipped", "reason=window_title"));
         state.Snapshot().FramesProcessed.Should().Be(0);
     }
 
@@ -197,7 +196,7 @@ public sealed class PrivacyGateTests
         }
 
         counters.ExcludedByWindow.Should().Be(0);
-        audit.Writes.Should().BeEmpty();
+        audit.Writes.Should().NotContain(("SensitiveSkipped", "reason=window_title"));
     }
 
     /// <summary>Sensitive OCR is dropped before AgentState.Update runs.</summary>
@@ -229,8 +228,7 @@ public sealed class PrivacyGateTests
         }
 
         state.Snapshot().FramesProcessed.Should().Be(0, "sensitive OCR must never reach state");
-        audit.Writes.Should().ContainSingle()
-            .Which.Should().Be(("SensitiveSkipped", "reason=ocr_content"));
+        audit.Writes.Should().Contain(("SensitiveSkipped", "reason=ocr_content"));
     }
 
     private static async Task WaitForAsync(Func<bool> condition, string what)
@@ -299,7 +297,7 @@ public sealed class PrivacyGateTests
         }
 
         counters.ExcludedBySensitive.Should().Be(0);
-        audit.Writes.Should().BeEmpty();
+        audit.Writes.Should().NotContain(("SensitiveSkipped", "reason=ocr_content"));
     }
 
     /// <summary>When both gates would fire, Gate 1 wins and Gate 2 is never reached.</summary>
@@ -330,8 +328,7 @@ public sealed class PrivacyGateTests
 
         ocr.Calls.Should().Be(0, "Gate 1 drops the frame so Gate 2 never runs");
         counters.ExcludedBySensitive.Should().Be(0);
-        audit.Writes.Should().ContainSingle()
-            .Which.Should().Be(("SensitiveSkipped", "reason=window_title"));
+        audit.Writes.Should().Contain(("SensitiveSkipped", "reason=window_title"));
     }
 
     /// <summary>A throwing filter must not crash the capture event handler.</summary>

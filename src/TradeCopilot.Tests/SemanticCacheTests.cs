@@ -105,7 +105,7 @@ public sealed class SemanticCacheTests : IDisposable
 
     private async Task<SqliteSemanticCache> NewCacheAsync(IEmbeddingProvider embeddings)
     {
-        var cache = new SqliteSemanticCache(embeddings);
+        var cache = new SqliteSemanticCache(embeddings, encryptCache: false);
         await cache.InitializeAsync(Path.Combine(_dir, $"{Guid.NewGuid():N}.db"));
         return cache;
     }

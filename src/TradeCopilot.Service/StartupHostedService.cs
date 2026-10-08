@@ -118,6 +118,7 @@ public sealed class StartupHostedService : IHostedService
             .ConfigureAwait(false);
         _started = true;
 
+        _audit.Write("CaptureStarted", string.Empty);
         _log.LogInformation("Ready");
     }
 

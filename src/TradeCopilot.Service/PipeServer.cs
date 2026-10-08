@@ -1,5 +1,6 @@
 using System.IO.Pipes;
 using System.Text;
+using Microsoft.Extensions.Logging.Abstractions;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
@@ -29,6 +30,9 @@ public sealed class PipeServer : BackgroundService
     private readonly AgentState _state;
     private readonly IScreenCapture _capture;
     private readonly ISpeechRecognizer _asr;
+    private readonly ISpeechSynthesizer _tts;
+    private readonly AudioCapture _audio;
+    private readonly IAuditSink _audit;
     private readonly AgentOptions _opts;
     private readonly PrivacyGateCounters? _counters;
     private readonly ILogger<PipeServer> _log;
@@ -40,6 +44,9 @@ public sealed class PipeServer : BackgroundService
     /// <param name="state">Current chart state.</param>
     /// <param name="capture">Screen capture, for status and pause/resume.</param>
     /// <param name="asr">Speech recognizer, for the transcribe command.</param>
+    /// <param name="tts">Speech synthesizer, stopped on panic.</param>
+    /// <param name="audio">Microphone capture, stopped on panic.</param>
+    /// <param name="audit">Content-free audit sink.</param>
     /// <param name="opts">Service options.</param>
     /// <param name="counters">Privacy exclusion counters (optional).</param>
     /// <param name="log">Logger.</param>
@@ -50,6 +57,9 @@ public sealed class PipeServer : BackgroundService
         ISpeechRecognizer asr,
         AgentOptions opts,
         ILogger<PipeServer> log,
+        ISpeechSynthesizer? tts = null,
+        AudioCapture? audio = null,
+        IAuditSink? audit = null,
         PrivacyGateCounters? counters = null)
     {
         ArgumentNullException.ThrowIfNull(orch);
@@ -62,6 +72,9 @@ public sealed class PipeServer : BackgroundService
         _state = state;
         _capture = capture;
         _asr = asr;
+        _tts = tts ?? new PiperSpeechSynthesizer(NullLogger<PiperSpeechSynthesizer>.Instance);
+        _audio = audio ?? new AudioCapture(NullLogger<AudioCapture>.Instance);
+        _audit = audit ?? NoopAuditSink.Instance;
         _opts = opts;
         _counters = counters;
         _log = log;
@@ -187,6 +200,7 @@ public sealed class PipeServer : BackgroundService
     private async Task<PipeResponse> AnswerQueryAsync(PipeMessage request, CancellationToken ct)
     {
         QueryResult result = await _orch.AnswerAsync(request.Text ?? string.Empty, ct).ConfigureAwait(false);
+        _audit.Write("AnswerSource", $"source={result.Source},ms={result.ElapsedMs}");
         return new PipeResponse
         {
             Type = "answer",
@@ -216,6 +230,7 @@ public sealed class PipeServer : BackgroundService
     private async Task<PipeResponse> PauseCaptureAsync(CancellationToken ct)
     {
         await _capture.StopAsync(ct).ConfigureAwait(false);
+        _audit.Write("CapturePaused", string.Empty);
         _log.LogInformation("Capture paused via pipe.");
         return new PipeResponse { Type = "ok" };
     }
@@ -249,18 +264,22 @@ public sealed class PipeServer : BackgroundService
     }
 
     /// <summary>
-    /// Emergency reset: stops capture and clears all agent state.
+    /// Emergency reset: stops speech and capture, clears all agent state.
     /// </summary>
     /// <remarks>
-    /// <see cref="ISpeechRecognizer"/> has no stop operation — each
-    /// <c>TranscribeAsync</c> call is self-contained and guarded by its own semaphore —
-    /// so there is nothing to cancel here beyond stopping capture and dropping state.
+    /// Order: TTS stop first (may hold the speaker), then the mic, then
+    /// capture, then state, then the audit line. <see cref="ISpeechRecognizer"/>
+    /// has no stop operation — each <c>TranscribeAsync</c> call is self-contained
+    /// and guarded by its own semaphore — so only capture state needs stopping.
     /// </remarks>
     private async Task<PipeResponse> PanicAsync(CancellationToken ct)
     {
+        await _tts.StopAsync().ConfigureAwait(false);
+        _audio.Stop();
         await _capture.StopAsync(ct).ConfigureAwait(false);
         _state.Clear();
-        _log.LogWarning("Panic: capture stopped and agent state cleared.");
+        _audit.Write("Panic", "source=pipe");
+        _log.LogWarning("Panic: speech stopped, capture stopped, agent state cleared.");
         return new PipeResponse { Type = "ok" };
     }
 }

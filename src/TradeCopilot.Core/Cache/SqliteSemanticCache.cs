@@ -27,6 +27,7 @@ public sealed partial class SqliteSemanticCache : ISemanticCache
 
     private readonly IEmbeddingProvider _embeddings;
     private readonly ILogger<SqliteSemanticCache> _log;
+    private readonly bool _encryptCache;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly List<(long Id, float[] Vector, string ContextHash)> _fallbackVectors = [];
 
@@ -38,10 +39,12 @@ public sealed partial class SqliteSemanticCache : ISemanticCache
     /// </summary>
     /// <param name="embeddings">Embedding provider.</param>
     /// <param name="logger">Logger (defaults to null logger).</param>
-    public SqliteSemanticCache(IEmbeddingProvider embeddings, ILogger<SqliteSemanticCache>? logger = null)
+    /// <param name="encryptCache">When true, answers are DPAPI-encrypted at rest.</param>
+    public SqliteSemanticCache(IEmbeddingProvider embeddings, ILogger<SqliteSemanticCache>? logger = null, bool encryptCache = false)
     {
         _embeddings = embeddings ?? throw new ArgumentNullException(nameof(embeddings));
         _log = logger ?? NullLogger<SqliteSemanticCache>.Instance;
+        _encryptCache = encryptCache;
     }
 
     /// <summary>True when the vec0 extension loaded and vector SQL is active.</summary>

@@ -76,13 +76,13 @@ public sealed class SemanticCacheMaintenanceTests : IDisposable
     public async Task ReinitializingOverSameDatabase_FindsStoredEntries()
     {
         string path = Path.Combine(_dir, "persist.db");
-        await using (var first = new SqliteSemanticCache(new FakeEmbeddingProvider()))
+        await using (var first = new SqliteSemanticCache(new FakeEmbeddingProvider(), encryptCache: false))
         {
             await first.InitializeAsync(path);
             await first.StoreAsync("q", "a", "en-US", "ctx");
         }
 
-        await using var second = new SqliteSemanticCache(new FakeEmbeddingProvider());
+        await using var second = new SqliteSemanticCache(new FakeEmbeddingProvider(), encryptCache: false);
         await second.InitializeAsync(path);
 
         IReadOnlyList<CacheEntry> entries = await second.GetRecentAsync(5);
@@ -93,7 +93,7 @@ public sealed class SemanticCacheMaintenanceTests : IDisposable
     private async Task<SqliteSemanticCache> NewCacheAsync()
     {
         _dbPath = Path.Combine(_dir, $"{Guid.NewGuid():N}.db");
-        var cache = new SqliteSemanticCache(new FakeEmbeddingProvider());
+        var cache = new SqliteSemanticCache(new FakeEmbeddingProvider(), encryptCache: false);
         await cache.InitializeAsync(_dbPath);
         return cache;
     }

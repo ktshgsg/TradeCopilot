@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Runtime.InteropServices;
 using Microsoft.Data.Sqlite;
+using TradeCopilot.Core.Privacy;
 
 namespace TradeCopilot.Core.Cache;
 
@@ -75,10 +76,16 @@ public sealed partial class SqliteSemanticCache
             using DbDataReader reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
             while (await reader.ReadAsync(ct).ConfigureAwait(false))
             {
+                string storedAnswer = reader.GetString(2);
+                if (_encryptCache)
+                {
+                    storedAnswer = CacheEncryption.Decrypt(storedAnswer);
+                }
+
                 entries.Add(new CacheEntry(
                     reader.GetInt64(0),
                     reader.GetString(1),
-                    reader.GetString(2),
+                    storedAnswer,
                     reader.GetString(3),
                     reader.GetString(4),
                     reader.GetInt64(5),

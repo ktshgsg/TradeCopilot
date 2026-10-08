@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Microsoft.Data.Sqlite;
+using TradeCopilot.Core.Privacy;
 
 namespace TradeCopilot.Core.Cache;
 
@@ -58,6 +59,11 @@ public sealed partial class SqliteSemanticCache
             if (answer is null)
             {
                 return new CacheLookupResult(false, null, hit.Similarity, false, null);
+            }
+
+            if (_encryptCache)
+            {
+                answer = CacheEncryption.Decrypt(answer);
             }
 
             using var bump = new SqliteCommand(

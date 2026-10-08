@@ -1,4 +1,5 @@
 using Microsoft.Data.Sqlite;
+using TradeCopilot.Core.Privacy;
 
 namespace TradeCopilot.Core.Cache;
 
@@ -19,6 +20,8 @@ public sealed partial class SqliteSemanticCache
         await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
+            // query_text stays plaintext (audit); only the answer is sensitive.
+            string storedAnswer = _encryptCache ? CacheEncryption.Encrypt(answerText) : answerText;
             using SqliteTransaction tx = (SqliteTransaction)await _connection!.BeginTransactionAsync(ct).ConfigureAwait(false);
             await using (tx.ConfigureAwait(false))
             {
@@ -30,7 +33,7 @@ public sealed partial class SqliteSemanticCache
                     tx))
                 {
                     insert.Parameters.AddWithValue("@p0", queryText);
-                    insert.Parameters.AddWithValue("@p1", answerText);
+                    insert.Parameters.AddWithValue("@p1", storedAnswer);
                     insert.Parameters.AddWithValue("@p2", languageCode);
                     insert.Parameters.AddWithValue("@p3", chartContextHash);
                     await insert.ExecuteNonQueryAsync(ct).ConfigureAwait(false);

@@ -44,7 +44,8 @@ builder.Services.AddSingleton<IEmbeddingProvider>(_ => new FakeEmbeddingProvider
 
 builder.Services.AddSingleton<ISemanticCache>(sp => new SqliteSemanticCache(
     sp.GetRequiredService<IEmbeddingProvider>(),
-    sp.GetRequiredService<ILogger<SqliteSemanticCache>>()));
+    sp.GetRequiredService<ILogger<SqliteSemanticCache>>(),
+    sp.GetRequiredService<AgentOptions>().Privacy.EncryptCache));
 
 // IRule is internal to Core, so the public default-rules constructor is used; it wires
 // all 11 built-in rules in evaluation order.
@@ -61,7 +62,10 @@ builder.Services.AddSingleton<AudioCapture>(sp => new AudioCapture(
     sp.GetRequiredService<ILogger<AudioCapture>>()));
 
 builder.Services.AddSingleton<IWindowFilter>(_ => new WindowFilter());
-builder.Services.AddSingleton<IAuditSink>(_ => NoopAuditSink.Instance);
+builder.Services.AddSingleton<IAuditSink>(sp =>
+    new AuditLog(
+        Path.Combine(AppContext.BaseDirectory, "data", "audit.log"),
+        sp.GetRequiredService<ILogger<AuditLog>>()));
 builder.Services.AddSingleton(sp => sp.GetRequiredService<AgentOptions>().Privacy);
 builder.Services.AddSingleton<PrivacyGateCounters>();
 
@@ -81,6 +85,7 @@ builder.Services.AddSingleton<AgentOrchestrator>(sp => new AgentOrchestrator(
 
 builder.Services.AddHostedService<StartupHostedService>();
 builder.Services.AddHostedService<PipeServer>();
+builder.Services.AddHostedService<CacheMaintenanceService>();
 
 var host = builder.Build();
 await host.RunAsync();
