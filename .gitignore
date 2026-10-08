@@ -485,9 +485,15 @@ $RECYCLE.BIN/
 *.swp
 
 # TradeCopilot local working folders (keep folders, ignore contents)
+# Root-level model/data/tool caches:
 /models/*
 /data/*
 /tools/*
+# Nested runtime data accidentally created under a project (e.g. service runs):
+**/data/*
+**/*.db
+**/*.db-shm
+**/*.db-wal
 # ...but keep markdown docs under tools/ (e.g. tools/README.md) tracked
 !tools/*.md
 
