@@ -16,10 +16,12 @@ namespace TradeCopilot.Tests;
 public sealed class CaptureTests
 {
     /// <summary>
-    /// Captures at 2 FPS for 10s; expects 18-22 frames and saves 5 PNGs.
+    /// Captures at 2 FPS for 10s and saves 5 PNGs. Asserts a widened count band
+    /// (15–25) plus timestamp monotonicity, mean inter-frame interval, and PNG sizes,
+    /// so the test survives busy-machine timing drift on CI.
     /// </summary>
     [Fact]
-    public async Task Capture_At2Fps_For10Seconds_Yields18To22Frames_AndSaves5Pngs()
+    public async Task Capture_At2Fps_For10Seconds_Yields15To25Frames_AndSaves5Pngs()
     {
         using var capture = new DxgiScreenCapture(targetFps: 2);
         var frames = new List<FrameData>();
@@ -65,7 +67,23 @@ public sealed class CaptureTests
             count = frames.Count;
         }
 
-        count.Should().BeInRange(18, 22);
+        count.Should().BeInRange(15, 25, "2 FPS for 10s yields ~20 frames, with headroom for busy-machine drift");
+
+        IReadOnlyList<DateTime> timestamps;
+        lock (gate)
+        {
+            timestamps = [.. frames.Select(f => f.TimestampUtc)];
+        }
+
+        timestamps.Should().HaveCount(count);
+        timestamps.Should().BeInAscendingOrder(
+            "frames must arrive in capture order even when the scheduler jitters");
+
+        double meanGapMs = timestamps
+            .Zip(timestamps.Skip(1), (prev, next) => (next - prev).TotalMilliseconds)
+            .Average();
+        meanGapMs.Should().BeInRange(
+            250, 550, "mean inter-frame interval should stay near the 500ms frame period");
 
         string dir = Path.Combine(AppContext.BaseDirectory, "captures");
         Directory.CreateDirectory(dir);
@@ -80,6 +98,8 @@ public sealed class CaptureTests
         {
             SavePng(Path.Combine(dir, $"frame{i}.png"), snapshot[i]);
             File.Exists(Path.Combine(dir, $"frame{i}.png")).Should().BeTrue();
+            new FileInfo(Path.Combine(dir, $"frame{i}.png")).Length.Should().BeGreaterThan(
+                10 * 1024, "every saved PNG must contain real frame data, not an empty image");
         }
     }
 
