@@ -52,9 +52,16 @@ public sealed partial class DxgiScreenCapture : IScreenCapture
                     using (desktopResource)
                     {
                         using ID3D11Texture2D desktopTexture = desktopResource.QueryInterface<ID3D11Texture2D>();
+
+                        // Copy FIRST, while the frame is still held. Per the DXGI docs the
+                        // desktop surface pointer is invalid after ReleaseFrame; some drivers
+                        // return zeroed memory, which produced blank frames.
+                        FrameData frame = CopyFrameToCpu(desktopTexture);
+
+                        // THEN release, THEN notify subscribers.
                         duplication.ReleaseFrame();
                         released = true;
-                        FrameData frame = CopyFrameToCpu(desktopTexture);
+
                         OnFrameCaptured?.Invoke(this, frame);
                     }
                 }
