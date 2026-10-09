@@ -134,6 +134,10 @@ public sealed partial class DxgiScreenCapture : IScreenCapture
 
         ID3D11Texture2D staging = _staging!;
         context.CopyResource(staging, desktopTexture);
+
+        // Ensure the copy has completed before mapping; some drivers defer
+        // the transfer and Map would otherwise return stale (zeroed) data.
+        context.Flush();
         MappedSubresource map = context.Map(staging, 0, MapMode.Read, D3D11MapFlags.None);
         try
         {
