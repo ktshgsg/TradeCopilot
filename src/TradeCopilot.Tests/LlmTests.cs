@@ -13,7 +13,7 @@ namespace TradeCopilot.Tests;
 /// </summary>
 public sealed class LlmTests
 {
-    private const string ModelFileName = "qwen2.5-3b-instruct-q4_k_m.gguf";
+    private const string ModelFileName = "bharat-tiny-llm-v3-q4_k_m.gguf";
 
     private static readonly string[] NumberMarkers = ["72", "overbought"];
     private static readonly string[] HinglishResponseMarkers = ["hai", "karo", "dekho", "zone"];
@@ -49,8 +49,8 @@ public sealed class LlmTests
             string path = FindModelPath();
             if (!File.Exists(path))
             {
-                Skip = $"LLM model not present at {path}; download {ModelFileName} from "
-                    + "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF (see models/README.md).";
+                Skip = $"LLM model not present at {path}; download Bharat-Tiny-LLM v3 from "
+                    + "https://huggingface.co/eulogik/Bharat-Tiny-LLM-v3 (see models/README.md).";
             }
         }
     }
