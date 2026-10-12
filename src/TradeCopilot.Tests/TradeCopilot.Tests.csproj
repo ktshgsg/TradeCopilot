@@ -27,6 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="xunit.runner.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
     <!-- Integration tests exercise PipeServer and AgentOptions. -->
     <ProjectReference Include="..\TradeCopilot.Service\TradeCopilot.Service.csproj" />

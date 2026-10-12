@@ -120,10 +120,11 @@ public sealed class PiperSpeechSynthesizer : ISpeechSynthesizer, IDisposable
 
     /// <summary>
     /// Runs piper.exe, feeding <paramref name="devanagari"/> on stdin as UTF-8 and writing
-    /// a WAV to <paramref name="outputPath"/>.
+    /// a WAV to <paramref name="outputPath"/>. Internal so tests can synthesize to a file
+    /// without playback (see TradeCopilot.Tests.SpeechTests).
     /// </summary>
     /// <returns>True when the WAV was produced before the timeout or cancellation.</returns>
-    private async Task<bool> SynthesizeAsync(string devanagari, string outputPath, CancellationToken ct)
+    internal async Task<bool> SynthesizeAsync(string devanagari, string outputPath, CancellationToken ct)
     {
         var startInfo = new ProcessStartInfo
         {

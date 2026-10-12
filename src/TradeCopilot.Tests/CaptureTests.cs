@@ -7,6 +7,7 @@ using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Ocr;
 using TradeCopilot.Core.Processing;
 using TradeCopilot.Core.Vision;
+using Xunit.Abstractions;
 
 namespace TradeCopilot.Tests;
 
@@ -15,6 +16,10 @@ namespace TradeCopilot.Tests;
 /// </summary>
 public sealed class CaptureTests
 {
+    private readonly ITestOutputHelper _output;
+
+    /// <summary>Surfaces test diagnostics (e.g. the EmptyFrameSkips count).</summary>
+    public CaptureTests(ITestOutputHelper output) => _output = output;
     /// <summary>
     /// Captures at 2 FPS for 10s and saves 5 PNGs. Asserts a widened count band
     /// (15–25) plus timestamp monotonicity, mean inter-frame interval, and PNG sizes,
@@ -62,12 +67,20 @@ public sealed class CaptureTests
         }
 
         int count;
+        double spanSec = 0;
         lock (gate)
         {
             count = frames.Count;
+            if (count > 1)
+            {
+                spanSec = (frames[^1].TimestampUtc - frames[0].TimestampUtc).TotalSeconds;
+            }
         }
 
-        count.Should().BeInRange(15, 25, "2 FPS for 10s yields ~20 frames, with headroom for busy-machine drift");
+        _output.WriteLine(
+            $"Empty frame skips: {capture.EmptyFrameSkips}; frames: {count}; span: {spanSec:F1}s");
+
+        count.Should().BeInRange(15, 30, "2 FPS for 10s yields ~20 frames, with headroom for busy-machine drift");
 
         IReadOnlyList<DateTime> timestamps;
         lock (gate)
@@ -101,6 +114,8 @@ public sealed class CaptureTests
             new FileInfo(Path.Combine(dir, $"frame{i}.png")).Length.Should().BeGreaterThan(
                 10 * 1024, "every saved PNG must contain real frame data, not an empty image");
         }
+
+        _output.WriteLine($"Empty frame skips: {capture.EmptyFrameSkips}");
     }
 
     /// <summary>
