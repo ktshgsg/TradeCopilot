@@ -12,7 +12,7 @@ namespace TradeCopilot.Core.Speech;
 /// <remarks>
 /// Uses the reflection-verified 1.9.1 fluent chain
 /// <c>WhisperFactory.FromPath(...).CreateBuilder().WithLanguage("hi").WithPrompt(...)
-/// .WithTemperature(0f).WithBeamSearchSamplingStrategy(b =&gt; b.WithBeamSize(5)).Build()</c>
+/// .WithTemperature(0f).WithThreads(n-1).WithGreedySamplingStrategy(...).Build()</c>
 /// and consumes <c>ProcessAsync(float[], ct)</c>, which returns
 /// <c>IAsyncEnumerable&lt;SegmentData&gt;</c>. Recognition runs on a background task and is
 /// serialized, so one instance serves one request at a time. A missing model or a load
@@ -21,14 +21,18 @@ namespace TradeCopilot.Core.Speech;
 public sealed class WhisperSpeechRecognizer : ISpeechRecognizer, IDisposable
 {
     /// <summary>Default GGML model path, relative to the working directory.</summary>
-    public const string DefaultModelPath = "models/ggml-medium.bin";
+    public const string DefaultModelPath = "models/ggml-base.bin";
 
     /// <summary>Where to obtain the Whisper GGML model.</summary>
     public const string ModelDownloadUrl =
-        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin";
+        "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin";
 
-    /// <summary>Beam size used for the beam-search sampling strategy.</summary>
-    public const int BeamSize = 5;
+    /// <summary>
+    /// Beam size was 5; on CPU that multiplies decode cost ~5x and beam search
+    /// amplifies hallucinated tokens on noisy audio. Greedy (bestOf=1) trades a
+    /// little accuracy for ~5x speed, which is the right call for interactive use.
+    /// </summary>
+    public const int BestOf = 1;
 
     private const float PcmScale = 32768f;
 
@@ -80,7 +84,8 @@ public sealed class WhisperSpeechRecognizer : ISpeechRecognizer, IDisposable
                 .WithLanguage("hi")
                 .WithPrompt(DomainPrompt)
                 .WithTemperature(0.0f)
-                .WithBeamSearchSamplingStrategy(b => b.WithBeamSize(BeamSize))
+                .WithThreads(Math.Max(1, Environment.ProcessorCount - 1))
+                .WithGreedySamplingStrategy(b => b.WithBestOf(BestOf))
                 .Build();
             stopwatch.Stop();
             _log.LogInformation(
@@ -220,3 +225,5 @@ public sealed class WhisperSpeechRecognizer : ISpeechRecognizer, IDisposable
         _factory = null;
     }
 }
+
+
