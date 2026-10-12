@@ -31,6 +31,13 @@ public sealed partial class DxgiScreenCapture : IDisposable
     private Thread? _thread;
     private CancellationTokenSource? _cts;
     private long _sequence;
+    private long _emptyFrameSkips;
+
+    // True from each DuplicateOutput until the first acquire completes: that very first
+    // AcquireNextFrame can report AccumulatedFrames=0 with an empty texture (observed on
+    // Intel HD under CPU contention). Later acc=0 frames are legitimate "desktop unchanged"
+    // notifications carrying the last real frame's content and must be published.
+    private volatile bool _firstFrameAfterInit = true;
     private bool _initialized;
     private bool _disposed;
 
@@ -38,6 +45,9 @@ public sealed partial class DxgiScreenCapture : IDisposable
 
     /// <summary>True while the capture thread is running.</summary>
     public bool IsCapturing => _capturing;
+
+    /// <summary>Empty first-acquire frames (AccumulatedFrames=0) skipped since construction.</summary>
+    public long EmptyFrameSkips => Interlocked.Read(ref _emptyFrameSkips);
 
     /// <summary>Which D3D11 driver the device was created with (Hardware, or WARP fallback).</summary>
     public string DriverKind { get; private set; } = "Unknown";
@@ -140,6 +150,10 @@ public sealed partial class DxgiScreenCapture : IDisposable
         {
             cts?.Dispose();
         }
+
+        _log.LogInformation(
+            "Capture stopped; {EmptyFrameSkips} empty first-acquire frame(s) skipped.",
+            Interlocked.Read(ref _emptyFrameSkips));
 
         return Task.CompletedTask;
     }

@@ -19,6 +19,7 @@ public sealed partial class DxgiScreenCapture
             {
                 IDXGIOutputDuplication duplication = output1.DuplicateOutput(device);
                 _duplication = duplication;
+                _firstFrameAfterInit = true;
                 _desktopWidth = width;
                 _desktopHeight = height;
                 _device = device;
@@ -101,6 +102,7 @@ public sealed partial class DxgiScreenCapture
                 using (output1)
                 {
                     _duplication = output1.DuplicateOutput(_device);
+                    _firstFrameAfterInit = true;
                     _desktopWidth = width;
                     _desktopHeight = height;
                 }

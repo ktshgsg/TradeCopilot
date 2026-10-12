@@ -31,7 +31,7 @@ public sealed partial class DxgiScreenCapture : IScreenCapture
                     }
 
                     Result acquire = duplication.AcquireNextFrame(
-                        AcquireTimeoutMs, out OutduplFrameInfo _, out IDXGIResource? desktopResource);
+                        AcquireTimeoutMs, out OutduplFrameInfo frameInfo, out IDXGIResource? desktopResource);
                     if (acquire == Vortice.DXGI.ResultCode.WaitTimeout)
                     {
                         continue;
@@ -51,6 +51,23 @@ public sealed partial class DxgiScreenCapture : IScreenCapture
 
                     using (desktopResource)
                     {
+                        // The first AcquireNextFrame after DuplicateOutput (every
+                        // re-initialization) can report AccumulatedFrames=0 with an empty
+                        // texture; publishing it emits a blank frame. Skip only that one —
+                        // later acc=0 frames mean "desktop unchanged" and carry valid content.
+                        if (_firstFrameAfterInit)
+                        {
+                            _firstFrameAfterInit = false;
+                            if (frameInfo.AccumulatedFrames == 0)
+                            {
+                                duplication.ReleaseFrame();
+                                released = true;
+                                Interlocked.Increment(ref _emptyFrameSkips);
+                                _log.LogDebug("Skipped empty first-acquire after init.");
+                                continue;
+                            }
+                        }
+
                         using ID3D11Texture2D desktopTexture = desktopResource.QueryInterface<ID3D11Texture2D>();
 
                         // Copy FIRST, while the frame is still held. Per the DXGI docs the
