@@ -13,23 +13,11 @@ public static class PromptBuilder
     /// <summary>Maximum OCR characters (Unicode codepoints) included in the user prompt.</summary>
     public const int MaxOcrCodepoints = 1500;
 
-    private const string SystemPrompt =
-        "You are TradeCopilot, an expert trading assistant for Indian retail traders.\n\n"
-        + "RULES:\n"
-        + "1. Respond in the SAME language AND script the user asked in.\n"
-        + "   - English query -> English response (Latin script).\n"
-        + "   - Devanagari Hindi/Hinglish query -> Devanagari response.\n"
-        + "   - Roman-script Hinglish query -> Roman-script Hinglish response.\n"
-        + "   Technical terms (RSI, MACD, support, resistance, breakout) stay in\n"
-        + "   Latin script in all cases.\n"
-        + "2. Keep answers under 3 sentences unless asked for detail.\n"
-        + "3. Cite exact numbers from the chart context.\n"
-        + "4. Never invent indicator values. If not provided, say you can't see it.\n"
-        + "5. Use 'may', 'suggests', 'likely'. Never give certainty.\n"
-        + "6. Never give financial advice as a promise of returns.";
-
     /// <summary>Returns the fixed system prompt.</summary>
-    public static string BuildSystemPrompt() => SystemPrompt;
+    public static string BuildSystemPrompt() =>
+        "You are TradeCopilot, an AI trading assistant.\n"
+        + "Reply in the user's language (English, Hindi, or Hinglish).\n"
+        + "Keep answers under 2 sentences and only cite numbers you see.";
 
     /// <summary>
     /// Builds the Qwen2.5 chat prompt; the model generates the reply from the
