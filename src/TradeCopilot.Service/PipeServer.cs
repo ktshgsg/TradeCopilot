@@ -1,6 +1,7 @@
 using System.IO.Pipes;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
+using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
@@ -33,6 +34,7 @@ public sealed class PipeServer : BackgroundService
     private readonly ISpeechSynthesizer _tts;
     private readonly AudioCapture _audio;
     private readonly IAuditSink _audit;
+    private readonly ISemanticCache? _cache;
     private readonly AgentOptions _opts;
     private readonly PrivacyGateCounters? _counters;
     private readonly ILogger<PipeServer> _log;
@@ -49,6 +51,7 @@ public sealed class PipeServer : BackgroundService
     /// <param name="audit">Content-free audit sink.</param>
     /// <param name="opts">Service options.</param>
     /// <param name="counters">Privacy exclusion counters (optional).</param>
+    /// <param name="cache">Semantic cache for the "purge_cache" command (optional; injected by DI).</param>
     /// <param name="log">Logger.</param>
     public PipeServer(
         AgentOrchestrator orch,
@@ -60,7 +63,8 @@ public sealed class PipeServer : BackgroundService
         ISpeechSynthesizer? tts = null,
         AudioCapture? audio = null,
         IAuditSink? audit = null,
-        PrivacyGateCounters? counters = null)
+        PrivacyGateCounters? counters = null,
+        ISemanticCache? cache = null)
     {
         ArgumentNullException.ThrowIfNull(orch);
         ArgumentNullException.ThrowIfNull(state);
@@ -75,6 +79,7 @@ public sealed class PipeServer : BackgroundService
         _tts = tts ?? new PiperSpeechSynthesizer(NullLogger<PiperSpeechSynthesizer>.Instance);
         _audio = audio ?? new AudioCapture(NullLogger<AudioCapture>.Instance);
         _audit = audit ?? NoopAuditSink.Instance;
+        _cache = cache;
         _opts = opts;
         _counters = counters;
         _log = log;
@@ -184,6 +189,7 @@ public sealed class PipeServer : BackgroundService
                 "resume_capture" => await ResumeCaptureAsync(ct).ConfigureAwait(false),
                 "transcribe" => await TranscribeAsync(request, ct).ConfigureAwait(false),
                 "panic" => await PanicAsync(ct).ConfigureAwait(false),
+                "purge_cache" => await PurgeCacheAsync(ct).ConfigureAwait(false),
                 _ => new PipeResponse { Type = "error", Message = $"unknown type '{request.Type}'" },
             };
         }
@@ -197,6 +203,22 @@ public sealed class PipeServer : BackgroundService
             return new PipeResponse { Type = "error", Message = $"'{request.Type}' failed: {ex.Message}" };
         }
     }
+    /// <summary>Purges low-value cache rows ("purge_cache" command) and replies "ok".</summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>An "ok" response, or an "error" response when no cache is attached.</returns>
+    private async Task<PipeResponse> PurgeCacheAsync(CancellationToken ct)
+    {
+        if (_cache is null)
+        {
+            return new PipeResponse { Type = "error", Message = "Semantic cache not available." };
+        }
+
+        await _cache.PurgeOlderThanAsync(TimeSpan.Zero, ct).ConfigureAwait(false);
+        _audit.Write("CachePurged", string.Empty);
+        _log.LogInformation("Semantic cache purged via pipe.");
+        return new PipeResponse { Type = "ok" };
+    }
+
     private async Task<PipeResponse> AnswerQueryAsync(PipeMessage request, CancellationToken ct)
     {
         QueryResult result = await _orch.AnswerAsync(request.Text ?? string.Empty, ct).ConfigureAwait(false);

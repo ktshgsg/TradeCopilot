@@ -1,7 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\TradeCopilot.UI.Logic\TradeCopilot.UI.Logic.csproj" />
+    <!-- Push-to-talk adapts Core's AudioCapture in the UI process. -->
+    <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -10,6 +12,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- GlobalHotkey uses LibraryImport source generation (generated marshalling is unsafe). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +32,9 @@
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Tray icons are pack-URI resources referenced by MainWindow.xaml. -->
+    <Resource Include="Assets\tray.ico" />
+    <Resource Include="Assets\tray-paused.ico" />
   </ItemGroup>
 
 </Project>

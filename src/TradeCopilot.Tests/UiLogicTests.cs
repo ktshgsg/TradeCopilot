@@ -143,4 +143,106 @@ public sealed class UiLogicTests
         Assert.Equal("v0.1.0", vm.VersionText);
         Assert.Equal("Capturing", vm.StatusText);
     }
+
+    /// <summary>QuitCommand disposes the pipe client (when it is IAsyncDisposable) and runs the shutdown action.</summary>
+    [Fact]
+    public async Task MainViewModel_QuitCommand_DisposesPipeClientAndShutsDown()
+    {
+        var pipe = Substitute.For<IPipeClient, IAsyncDisposable>();
+        bool shutdownCalled = false;
+        var vm = new MainViewModel(pipe, NullLogger<MainViewModel>.Instance, audio: null, shutdown: () => shutdownCalled = true);
+
+        await vm.QuitCommand.ExecuteAsync(null);
+
+        await ((IAsyncDisposable)pipe).Received(1).DisposeAsync();
+        Assert.True(shutdownCalled);
+    }
+
+    /// <summary>Sending "purge_cache" forwards the request type over the pipe and reports success.</summary>
+    [Fact]
+    public async Task MainViewModel_PurgeCacheAsync_SendsPurgeCacheRequest()
+    {
+        var pipe = Substitute.For<IPipeClient>();
+        pipe.SendAsync(Arg.Any<PipeRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new PipeResponse { Type = "ok" });
+        var vm = new MainViewModel(pipe, NullLogger<MainViewModel>.Instance);
+
+        await vm.PurgeCacheCommand.ExecuteAsync(null);
+
+        await pipe.Received(1).SendAsync(
+            Arg.Is<PipeRequest>(r => r.Type == "purge_cache"),
+            Arg.Any<CancellationToken>());
+        Assert.Equal("Cache purged.", vm.StatusText);
+    }
+
+    /// <summary>Save then load returns identical settings values (settings.json round-trip).</summary>
+    [Fact]
+    public void SettingsStore_SaveThenLoad_ReturnsSameValues()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "TradeCopilot.Tests", Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(dir, "settings.json");
+        try
+        {
+            var store = new SettingsStore(path);
+            var original = new UiSettings
+            {
+                RegionX = 10,
+                RegionY = 20,
+                RegionWidth = 1280,
+                RegionHeight = 720,
+                Fps = 5,
+                Language = "hi",
+                VoiceOutputEnabled = true,
+                PushToTalkEnabled = false,
+                VoiceModel = "hi_IN-rohan-medium",
+                EncryptCache = false,
+                ExclusionPatterns = new List<string> { "*Bank*", "*Password*" },
+            };
+
+            store.Save(original);
+            UiSettings loaded = store.Load();
+
+            Assert.Equal(original.RegionX, loaded.RegionX);
+            Assert.Equal(original.RegionY, loaded.RegionY);
+            Assert.Equal(original.RegionWidth, loaded.RegionWidth);
+            Assert.Equal(original.RegionHeight, loaded.RegionHeight);
+            Assert.Equal(original.Fps, loaded.Fps);
+            Assert.Equal(original.Language, loaded.Language);
+            Assert.Equal(original.VoiceOutputEnabled, loaded.VoiceOutputEnabled);
+            Assert.Equal(original.PushToTalkEnabled, loaded.PushToTalkEnabled);
+            Assert.Equal(original.VoiceModel, loaded.VoiceModel);
+            Assert.Equal(original.EncryptCache, loaded.EncryptCache);
+            Assert.Equal(original.ExclusionPatterns, loaded.ExclusionPatterns);
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+    }
+
+    /// <summary>A missing consent flag means consent must be shown; MarkAccepted then hides the dialog.</summary>
+    [Fact]
+    public void ConsentGate_ShouldShow_FollowsFlagFilePresence()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "TradeCopilot.Tests", Guid.NewGuid().ToString("N"));
+        string flag = Path.Combine(dir, ".consent-accepted");
+        try
+        {
+            Assert.True(ConsentGate.ShouldShow(flag));
+
+            ConsentGate.MarkAccepted(flag);
+            Assert.True(File.Exists(flag));
+            Assert.False(ConsentGate.ShouldShow(flag));
+        }
+        finally
+        {
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+        }
+    }
 }

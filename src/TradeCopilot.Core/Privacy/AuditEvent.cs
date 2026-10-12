@@ -17,4 +17,7 @@ public enum AuditEvent
 
     /// <summary>Emergency reset was triggered via the pipe.</summary>
     Panic,
+
+    /// <summary>The semantic cache was purged on demand via the pipe ("purge_cache").</summary>
+    CachePurged,
 }

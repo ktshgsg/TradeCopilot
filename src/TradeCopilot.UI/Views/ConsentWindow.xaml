@@ -1,0 +1,41 @@
+<Window x:Class="TradeCopilot.UI.Views.ConsentWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Welcome to TradeCopilot"
+        Width="540" Height="440"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="#1A1A1A" Foreground="#E0E0E0"
+        FontFamily="Segoe UI">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Welcome to TradeCopilot"
+                   FontSize="18" FontWeight="Bold" Foreground="#E0E0E0" Margin="0,0,0,16" />
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock TextWrapping="Wrap" Foreground="#E0E0E0" Margin="0,0,0,12"
+                           Text="This app records your screen to analyze trading charts." />
+                <TextBlock TextWrapping="Wrap" Foreground="#E0E0E0" Margin="0,0,0,12"
+                           Text="All analysis is done locally on your PC using AI models. Your screenshots never leave this computer unless you explicitly enable cloud features (not available in v1)." />
+                <TextBlock TextWrapping="Wrap" Foreground="#E0E0E0" Margin="0,0,0,12"
+                           Text="Your microphone is used only when you press the voice hotkey. Audio is processed locally and never stored." />
+                <TextBlock TextWrapping="Wrap" Foreground="#E0E0E0" Margin="0,0,0,12"
+                           Text="Screenshots are excluded from sensitive windows (banking, password managers, etc.) based on your exclusion list." />
+                <TextBlock TextWrapping="Wrap" Foreground="#E0E0E0"
+                           Text="You can pause capture at any time with Ctrl+Shift+P. Press Ctrl+Shift+X to panic-stop." />
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button Content="Quit" Width="90" Padding="10,6" Margin="0,0,10,0" Click="QuitButton_Click" />
+            <Button Content="I agree" Width="110" Padding="10,6" Background="#4A9EFF" Foreground="White"
+                    IsDefault="True" Click="AgreeButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>
