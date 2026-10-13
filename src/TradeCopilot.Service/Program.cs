@@ -54,6 +54,10 @@ builder.Services.AddSingleton<IRuleEngine>(sp => new TradingRuleEngine(
 
 builder.Services.AddSingleton<ILlmEngine>(sp => new LlamaSharpEngine(
     sp.GetRequiredService<ILogger<LlamaSharpEngine>>()));
+
+// Vision: Moondream via a Python worker process. A missing worker, interpreter, or
+// model simply disables vision at startup (Enabled=false) instead of failing.
+builder.Services.AddSingleton<IVisionEngine, MoondreamVisionEngine>();
 builder.Services.AddSingleton<ISpeechRecognizer>(sp => new WhisperSpeechRecognizer(
     sp.GetRequiredService<ILogger<WhisperSpeechRecognizer>>()));
 builder.Services.AddSingleton<ISpeechSynthesizer>(sp => new PiperSpeechSynthesizer(
@@ -81,6 +85,7 @@ builder.Services.AddSingleton<AgentOrchestrator>(sp => new AgentOrchestrator(
     sp.GetRequiredService<ISemanticCache>(),
     sp.GetRequiredService<IRuleEngine>(),
     sp.GetRequiredService<ILlmEngine>(),
+    sp.GetRequiredService<IVisionEngine>(),
     sp.GetRequiredService<ILogger<AgentOrchestrator>>()));
 
 builder.Services.AddHostedService<StartupHostedService>();

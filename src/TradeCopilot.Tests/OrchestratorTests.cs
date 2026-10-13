@@ -31,8 +31,10 @@ public sealed class OrchestratorTests
         ISemanticCache cache,
         IRuleEngine rules,
         ILlmEngine llm,
-        AgentState? state = null) =>
-        new(state ?? new AgentState(), cache, rules, llm, NullLogger<AgentOrchestrator>.Instance);
+        AgentState? state = null,
+        IVisionEngine? vision = null) =>
+        new(state ?? new AgentState(), cache, rules, llm, vision ?? DisabledVisionEngine.Instance,
+            NullLogger<AgentOrchestrator>.Instance);
 
     /// <summary>A high-similarity, context-matching cache hit is returned as "cache".</summary>
     [Fact]

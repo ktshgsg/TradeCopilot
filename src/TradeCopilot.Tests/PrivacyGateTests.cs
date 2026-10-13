@@ -113,7 +113,7 @@ public sealed class PrivacyGateTests
         var asr = Substitute.For<ISpeechRecognizer>();
         var tts = Substitute.For<ISpeechSynthesizer>();
         var orchestrator = new AgentOrchestrator(
-            state, cache, rules, llm, NullLogger<AgentOrchestrator>.Instance);
+            state, cache, rules, llm, DisabledVisionEngine.Instance, NullLogger<AgentOrchestrator>.Instance);
         var processor = new FrameProcessor(
             new FrameGate(),
             ocr,
@@ -124,6 +124,7 @@ public sealed class PrivacyGateTests
             llm,
             asr,
             tts,
+            DisabledVisionEngine.Instance,
             state,
             orchestrator,
             capture,

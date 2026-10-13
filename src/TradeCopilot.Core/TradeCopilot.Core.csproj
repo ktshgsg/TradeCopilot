@@ -16,6 +16,8 @@
     <!-- OCR / Vision -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" />
     <PackageReference Include="Microsoft.ML.Tokenizers" />
+    <!-- MoondreamVisionEngine encodes captured frames to PNG via System.Drawing. -->
+    <PackageReference Include="System.Drawing.Common" />
 
     <!-- Storage -->
     <PackageReference Include="Microsoft.Data.Sqlite" />
@@ -42,5 +44,14 @@
   <ItemGroup>
     <!-- The test project exercises internal decode/letterbox helpers directly. -->
     <InternalsVisibleTo Include="TradeCopilot.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Moondream worker script; spawned from AppContext.BaseDirectory/tools/vision and
+         copied into the Service and test output (content flows transitively). -->
+    <Content Include="..\..\tools\vision\moondream_worker.py" Link="tools\vision\moondream_worker.py">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 </Project>

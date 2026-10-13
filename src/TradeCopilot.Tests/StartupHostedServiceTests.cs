@@ -115,7 +115,7 @@ public sealed class StartupHostedServiceTests
         var capture = new FakeScreenCapture();
 
         var orchestrator = new AgentOrchestrator(
-            state, cache, rules, llm, NullLogger<AgentOrchestrator>.Instance);
+            state, cache, rules, llm, DisabledVisionEngine.Instance, NullLogger<AgentOrchestrator>.Instance);
 
         var frameProcessor = new FrameProcessor(
             new FrameGate(),
@@ -135,6 +135,7 @@ public sealed class StartupHostedServiceTests
             llm,
             asr,
             tts,
+            DisabledVisionEngine.Instance,
             state,
             orchestrator,
             capture,

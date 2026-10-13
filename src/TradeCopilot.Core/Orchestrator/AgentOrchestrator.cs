@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using TradeCopilot.Core.Cache;
+using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Ocr;
 using TradeCopilot.Core.Rules;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Core.Orchestrator;
 
@@ -39,12 +41,14 @@ public sealed class AgentOrchestrator
 
     private const string SourceCache = "cache";
     private const string SourceRule = "rule";
+    private const string SourceVision = "vision";
     private const string SourceLlm = "llm";
 
     private readonly AgentState _state;
     private readonly ISemanticCache _cache;
     private readonly IRuleEngine _rules;
     private readonly ILlmEngine _llm;
+    private readonly IVisionEngine _vision;
     private readonly ILogger<AgentOrchestrator> _log;
 
     /// <summary>Creates the orchestrator over the given stages.</summary>
@@ -52,23 +56,27 @@ public sealed class AgentOrchestrator
     /// <param name="cache">Semantic answer cache.</param>
     /// <param name="rules">Deterministic rule engine.</param>
     /// <param name="llm">Local LLM engine.</param>
+    /// <param name="vision">Vision engine for visual questions.</param>
     /// <param name="log">Logger.</param>
     public AgentOrchestrator(
         AgentState state,
         ISemanticCache cache,
         IRuleEngine rules,
         ILlmEngine llm,
+        IVisionEngine vision,
         ILogger<AgentOrchestrator> log)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(llm);
+        ArgumentNullException.ThrowIfNull(vision);
         ArgumentNullException.ThrowIfNull(log);
         _state = state;
         _cache = cache;
         _rules = rules;
         _llm = llm;
+        _vision = vision;
         _log = log;
     }
     /// <summary>
@@ -138,6 +146,33 @@ public sealed class AgentOrchestrator
             _log.LogError(ex, "Rule evaluation failed; continuing to the LLM.");
         }
 
+        // Vision stage: only for visual questions when a frame is available and the model
+        // loaded. Any failure or empty answer falls through to the LLM exactly as before.
+        FrameData? frame = snapshot.Frame;
+        if (_vision.Enabled && frame is not null && QueryIsVisual(query))
+        {
+            try
+            {
+                string answer = await _vision.DescribeAsync(frame, query, ct).ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(answer))
+                {
+                    await TryStoreAsync(query, answer, langCode, snapshot.ContextHash, ct).ConfigureAwait(false);
+
+                    QueryResult visionResult = new(answer, langCode, SourceVision, stopwatch.ElapsedMilliseconds);
+                    LogAnswered(visionResult, null);
+                    return visionResult;
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.LogError(ex, "Vision description failed; continuing to the LLM.");
+            }
+        }
+
         try
         {
             string system = PromptBuilder.BuildSystemPrompt();
@@ -188,6 +223,37 @@ public sealed class AgentOrchestrator
             // The answer is already computed; a cache write failure must not fail the query.
             _log.LogWarning(ex, "Failed to store answer in the semantic cache.");
         }
+    }
+
+    /// <summary>
+    /// Substrings (matched case-insensitively) that mark a question as visual so it is
+    /// offered to the vision stage before the LLM.
+    /// </summary>
+    private static readonly string[] VisionKeywords =
+    [
+        "chart", "graph", "pattern", "trend", "candle", "candlestick", "breakout",
+        "support", "resistance", "bullish", "bearish", "volume", "trendline", "drawn",
+        "shape", "screenshot", "image", "picture", "visual", "visible", "indicator",
+        "oscillator", "describe", "look",
+    ];
+
+    /// <summary>True when the query is asking what is visible on the screen.</summary>
+    private static bool QueryIsVisual(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return false;
+        }
+
+        foreach (string keyword in VisionKeywords)
+        {
+            if (query.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static bool IsUsableCacheHit(CacheLookupResult result) =>

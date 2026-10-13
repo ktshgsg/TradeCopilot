@@ -497,6 +497,10 @@ $RECYCLE.BIN/
 # ...but keep markdown docs under tools/ (e.g. tools/README.md) tracked
 !tools/*.md
 
+# ...but keep the Moondream vision worker script tracked (re-include dir, then the file)
+!/tools/vision/
+!/tools/vision/*.py
+
 # Keep empty dirs in fresh clones
 !models/.gitkeep
 !models/README.md

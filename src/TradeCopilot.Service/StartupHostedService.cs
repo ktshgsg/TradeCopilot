@@ -7,6 +7,7 @@ using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Processing;
 using TradeCopilot.Core.Speech;
+using TradeCopilot.Core.Vision;
 
 namespace TradeCopilot.Service;
 
@@ -25,6 +26,7 @@ public sealed class StartupHostedService : IHostedService
     private readonly ILlmEngine _llm;
     private readonly ISpeechRecognizer _asr;
     private readonly ISpeechSynthesizer _tts;
+    private readonly IVisionEngine _vision;
     private readonly AgentState _state;
     private readonly AgentOrchestrator _orchestrator;
     private readonly IScreenCapture _capture;
@@ -46,6 +48,7 @@ public sealed class StartupHostedService : IHostedService
     /// <param name="llm">LLM engine.</param>
     /// <param name="asr">Speech recognizer.</param>
     /// <param name="tts">Speech synthesizer.</param>
+    /// <param name="vision">Vision engine for visual questions.</param>
     /// <param name="state">Agent state.</param>
     /// <param name="orchestrator">Query orchestrator.</param>
     /// <param name="capture">Screen capture.</param>
@@ -62,6 +65,7 @@ public sealed class StartupHostedService : IHostedService
         ILlmEngine llm,
         ISpeechRecognizer asr,
         ISpeechSynthesizer tts,
+        IVisionEngine vision,
         AgentState state,
         AgentOrchestrator orchestrator,
         IScreenCapture capture,
@@ -78,6 +82,7 @@ public sealed class StartupHostedService : IHostedService
         ArgumentNullException.ThrowIfNull(llm);
         ArgumentNullException.ThrowIfNull(asr);
         ArgumentNullException.ThrowIfNull(tts);
+        ArgumentNullException.ThrowIfNull(vision);
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(orchestrator);
         ArgumentNullException.ThrowIfNull(capture);
@@ -89,6 +94,7 @@ public sealed class StartupHostedService : IHostedService
         _llm = llm;
         _asr = asr;
         _tts = tts;
+        _vision = vision;
         _state = state;
         _orchestrator = orchestrator;
         _capture = capture;
@@ -119,6 +125,9 @@ public sealed class StartupHostedService : IHostedService
         _started = true;
 
         _audit.Write("CaptureStarted", string.Empty);
+        // Fire-and-forget: loading the vision model must not delay the "Ready" signal.
+        StartVisionInit();
+
         _log.LogInformation("Ready");
     }
 
@@ -143,6 +152,7 @@ public sealed class StartupHostedService : IHostedService
         DisposeIfDisposable(_tts);
         DisposeIfDisposable(_asr);
         DisposeIfDisposable(_llm);
+        DisposeIfDisposable(_vision);
         DisposeIfDisposable(_audio);
         DisposeIfDisposable(_capture);
 
@@ -257,6 +267,21 @@ public sealed class StartupHostedService : IHostedService
         }
     }
 
+    private void StartVisionInit()
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _vision.InitializeAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.LogWarning(ex, "Vision init failed; vision disabled.");
+            }
+        });
+    }
+
     private void WirePipeline()
     {
         _frameHandler = (_, frame) =>
@@ -295,7 +320,7 @@ public sealed class StartupHostedService : IHostedService
                     }
                 }
 
-                _state.Update(processed.Ocr, processed.Patterns);
+                _state.Update(processed.Ocr, processed.Patterns, processed.Frame);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

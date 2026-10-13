@@ -93,7 +93,7 @@ public sealed class PipeServerTests
 
         var capture = new FakeScreenCapture();
         var orchestrator = new AgentOrchestrator(
-            state, cache, rules, llm, NullLogger<AgentOrchestrator>.Instance);
+            state, cache, rules, llm, DisabledVisionEngine.Instance, NullLogger<AgentOrchestrator>.Instance);
 
         IHost host = new HostBuilder()
             .ConfigureLogging(logging => logging.ClearProviders())
