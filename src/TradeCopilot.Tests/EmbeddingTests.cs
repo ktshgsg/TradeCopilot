@@ -4,7 +4,7 @@ using TradeCopilot.Core.Embeddings;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: deterministic fake embeddings and the ONNX provider's documented
+/// Embedding tests: deterministic fake embeddings and the ONNX provider's documented
 /// fallback behavior when model files are missing or the tokenizer is unsupported.
 /// </summary>
 public sealed class EmbeddingTests

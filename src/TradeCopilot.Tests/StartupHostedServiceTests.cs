@@ -17,7 +17,7 @@ using TradeCopilot.Service;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 2 tests for <see cref="StartupHostedService"/>: the ordered startup log
+/// Tests for <see cref="StartupHostedService"/>: the ordered startup log
 /// sequence and a prompt, non-hanging shutdown.
 /// </summary>
 [Trait("Category", "Integration")]

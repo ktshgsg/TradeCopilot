@@ -4,7 +4,7 @@ using TradeCopilot.Core.Privacy;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 3a tests for <see cref="WindowFilter"/>: wildcard matching,
+/// Tests for <see cref="WindowFilter"/>: wildcard matching,
 /// escaping, empty-pattern handling, and the no-foreground-window path.
 /// </summary>
 public sealed class WindowFilterTests

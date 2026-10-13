@@ -5,7 +5,7 @@ using TradeCopilot.Core.Privacy;
 
 namespace TradeCopilot.Tests;
 
-/// <summary>Task 5 stage 3b tests: the append-only content-free audit log.</summary>
+/// <summary>Tests for the append-only content-free audit log.</summary>
 public sealed class AuditLogTests
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "tc-audit-" + Guid.NewGuid().ToString("N"));

@@ -506,3 +506,16 @@ $RECYCLE.BIN/
 !models/README.md
 !data/.gitkeep
 !tools/.gitkeep
+*.trx
+diag-*.txt
+data/
+models/*.gguf
+models/*.bin
+models/piper/*.onnx
+models/piper/*.onnx.json
+tools/piper/*.exe
+tools/piper/*.dll
+tools/piper/*.zip
+tools/piper/espeak-ng-data/
+.venv/
+.venv-1/

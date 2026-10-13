@@ -8,8 +8,8 @@ using Xunit.Abstractions;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 3 stage 2 tests: LLamaSharp engine behavior with and without a model,
-/// prompt building, and the Qwen2.5 chat template.
+/// LLM engine tests: LlamaSharp behavior with and without a model,
+/// prompt building, chat template.
 /// </summary>
 public sealed class LlmTests
 {

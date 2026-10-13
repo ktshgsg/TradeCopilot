@@ -16,7 +16,7 @@ using TradeCopilot.Service;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 3a tests for the two privacy gates in
+/// Tests for the two privacy gates in
 /// <see cref="StartupHostedService"/>: the pre-OCR window-title filter and the
 /// post-OCR sensitive-content check.
 /// </summary>

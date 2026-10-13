@@ -7,7 +7,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 3 stage 1 tests: per-rule behavior, language routing across English,
+/// Rule engine tests: per-rule behavior, language routing across English,
 /// Hinglish, and Devanagari queries, match rate, and robustness to null input.
 /// </summary>
 /// <remarks>

@@ -6,7 +6,7 @@ public sealed class UiOptions
     /// <summary>Named-pipe endpoint the service hosts.</summary>
     public string PipeName { get; set; } = "TradeCopilot.Pipe";
 
-    /// <summary>Whether assistant answers are also spoken aloud. Wired in Stage 6b.</summary>
+    /// <summary>Whether assistant answers are also spoken aloud.</summary>
     public bool VoiceOutputEnabled { get; set; }
 
     /// <summary>Preferred answer language: "auto", "en", or "hi".</summary>

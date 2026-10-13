@@ -6,7 +6,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: pattern labels, letterbox preprocessing, and disabled-detector
+/// Vision tests: pattern labels, letterbox preprocessing, and disabled-detector
 /// behavior when the YOLO model is absent or unloadable.
 /// </summary>
 public sealed class VisionTests

@@ -11,7 +11,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 1 tests for <see cref="AgentOrchestrator"/>: stage ordering (cache, then
+/// Tests for <see cref="AgentOrchestrator"/>: stage ordering (cache, then
 /// rules, then the LLM), language routing, fallback behaviour, and fault tolerance.
 /// </summary>
 public sealed class OrchestratorTests

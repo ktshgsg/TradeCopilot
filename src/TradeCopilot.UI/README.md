@@ -4,7 +4,7 @@ WPF overlay + tray shell for TradeCopilot. Talks to the service only over the na
 (`TradeCopilot.UI.Logic.PipeClient`); it never touches Core's capture or storage directly
 (push-to-talk's `AudioCapture` adapter is the one documented exception).
 
-## Stage 6b decisions
+## Design decisions
 
 - **Push-to-talk = toggle, not hold.** `RegisterHotKey` fires once per keydown, so
   Ctrl+Alt+Space toggles recording (press to start, press again to stop) instead of a
@@ -42,5 +42,5 @@ Covered in `TradeCopilot.Tests/UiLogicTests.cs` (no WPF dependency):
 
 **Not covered (by design):** WPF-specific behavior - tray icon rendering, XAML layout,
 global hotkey registration, window show/hide, consent dialog interaction. These require a
-desktop session and are exercised by the Stage 6b manual test instead (consent -> overlay,
+desktop session and are exercised by the manual test instead (consent -> overlay,
 tray menu, Ctrl+Shift+P status flip, Ctrl+Shift+X panic, tray Quit leaves no process).

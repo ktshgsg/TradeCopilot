@@ -1,7 +1,7 @@
 namespace TradeCopilot.Core.Privacy;
 
 /// <summary>
-/// Minimal audit sink consumed by the privacy gates. The full Stage 3
+/// Minimal audit sink consumed by the privacy gates. The full
 /// <c>AuditLog</c> will implement this interface; using it now means the
 /// gate code does not change later.
 /// </summary>

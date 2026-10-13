@@ -8,7 +8,7 @@ using Xunit.Abstractions;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 4 tests: audio capture VAD, Whisper recognition behaviour with and without a
+/// Speech tests: audio capture VAD, Whisper recognition behaviour with and without a
 /// model, Hinglish→Devanagari transliteration, and Piper synthesis behaviour.
 /// </summary>
 public sealed class SpeechTests

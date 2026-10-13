@@ -4,7 +4,7 @@ using TradeCopilot.Core.Privacy;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 3a tests for <see cref="SensitiveDetector"/>: the 14-row
+/// Tests for <see cref="SensitiveDetector"/>: the 14-row
 /// null/empty/whitespace truth table, per-keyword positives, word-boundary
 /// negatives, and the no-throw contract.
 /// </summary>

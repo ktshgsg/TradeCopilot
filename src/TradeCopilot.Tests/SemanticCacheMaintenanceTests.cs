@@ -6,7 +6,7 @@ using TradeCopilot.Core.Embeddings;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: cache maintenance — age-based purging, recent listing, and
+/// Cache maintenance tests: age-based purging, recent listing, and
 /// persistence across cache instances.
 /// </summary>
 public sealed class SemanticCacheMaintenanceTests : IDisposable

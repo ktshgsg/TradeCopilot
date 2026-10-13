@@ -8,7 +8,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: FrameProcessor merges OCR and pattern detection through the
+/// Processing tests: FrameProcessor merges OCR and pattern detection through the
 /// IOcrEngine and IChartPatternDetector seams (NSubstitute doubles).
 /// </summary>
 public sealed class ProcessingTests

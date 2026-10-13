@@ -5,7 +5,7 @@ using TradeCopilot.Core.Embeddings;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: semantic cache store/query, similarity thresholding, hit counting,
+/// Semantic cache tests: store/query, similarity thresholding, hit counting,
 /// and chart-context preference.
 /// </summary>
 public sealed class SemanticCacheTests : IDisposable

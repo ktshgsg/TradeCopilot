@@ -7,7 +7,7 @@ using TradeCopilot.Core.Privacy;
 
 namespace TradeCopilot.Tests;
 
-/// <summary>Task 5 stage 3b tests: DPAPI answer encryption at rest.</summary>
+/// <summary>Tests for DPAPI answer encryption at rest.</summary>
 public sealed class CacheEncryptionTests : IDisposable
 {
     private const string Answer = "RSI overbought hai.";

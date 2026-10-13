@@ -6,7 +6,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 1 tests for <see cref="AgentState"/>: snapshot semantics, context-hash
+/// Tests for <see cref="AgentState"/>: snapshot semantics, context-hash
 /// stability, clearing, and thread safety under concurrent updates and reads.
 /// </summary>
 public sealed class AgentStateTests

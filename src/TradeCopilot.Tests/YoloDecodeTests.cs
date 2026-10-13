@@ -4,7 +4,7 @@ using TradeCopilot.Core.Vision;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 2 tests: raw YOLO output decoding — layout detection, score filtering,
+/// Tests for raw YOLO output decoding — layout detection, score filtering,
 /// per-class NMS, and frame-space coordinate mapping.
 /// </summary>
 public sealed class YoloDecodeTests

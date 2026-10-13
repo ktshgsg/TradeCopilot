@@ -20,7 +20,7 @@ using TradeCopilot.Service;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 5 stage 2 integration test: drives <see cref="PipeServer"/> over a real named
+/// Integration test: drives <see cref="PipeServer"/> over a real named
 /// pipe using its own host and a unique pipe name, so it never collides with the
 /// production service.
 /// </summary>

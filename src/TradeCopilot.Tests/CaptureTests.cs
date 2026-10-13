@@ -12,7 +12,7 @@ using Xunit.Abstractions;
 namespace TradeCopilot.Tests;
 
 /// <summary>
-/// Task 1 tests: capture-to-OCR pipeline (hash, gate, OCR, context hash, live capture).
+/// Screen capture pipeline tests: perceptual hash, frame gate, OCR, live capture.
 /// </summary>
 public sealed class CaptureTests
 {
