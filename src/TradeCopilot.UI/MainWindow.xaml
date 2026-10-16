@@ -38,6 +38,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="40" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -63,7 +64,13 @@
                 <Button Grid.Column="4" Content="\u00D7" Width="32" VerticalAlignment="Center" Click="CloseButton_Click" />
             </Grid>
         </Border>
-        <ScrollViewer Grid.Row="1" x:Name="MessageScroll" VerticalScrollBarVisibility="Auto" Padding="12">
+        <!-- Degraded-mode banner: required AI models are missing (rules + cache only). -->
+        <Border Grid.Row="1" Background="#4A3200" Padding="12,6"
+                Visibility="{Binding DegradedMode, Converter={StaticResource VisibleWhenTrue}}">
+            <TextBlock Text="{Binding DegradedBannerText}" TextWrapping="Wrap"
+                       Foreground="#FFB74D" FontSize="11" />
+        </Border>
+        <ScrollViewer Grid.Row="2" x:Name="MessageScroll" VerticalScrollBarVisibility="Auto" Padding="12">
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
@@ -106,7 +113,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
-        <Border Grid.Row="2" Background="#232323" Padding="12,6">
+        <Border Grid.Row="3" Background="#232323" Padding="12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -116,7 +123,7 @@
                 <TextBlock Grid.Column="1" Text="{Binding VersionText}" FontSize="11" Foreground="#888888" VerticalAlignment="Center" />
             </Grid>
         </Border>
-        <Border Grid.Row="3" Background="#1A1A1A" Padding="12,8" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
+        <Border Grid.Row="4" Background="#1A1A1A" Padding="12,8" BorderBrush="#3A3A3A" BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />

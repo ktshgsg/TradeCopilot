@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- windows TFM: FirstRunViewModel consumes ModelManifest/ModelDownloader from Core,
+         which targets net8.0-windows. Still no WPF dependency. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
@@ -10,6 +12,11 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- First-run wizard view model drives the Core model downloader. -->
+    <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
   </ItemGroup>
 
 </Project>

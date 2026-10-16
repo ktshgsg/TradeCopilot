@@ -36,7 +36,7 @@
     <ProjectReference Include="..\TradeCopilot.Core\TradeCopilot.Core.csproj" />
     <!-- Integration tests exercise PipeServer and AgentOptions. -->
     <ProjectReference Include="..\TradeCopilot.Service\TradeCopilot.Service.csproj" />
-    <!-- UI.Logic tests: PipeClient + MainViewModel (net8.0, no WPF dependencies). -->
+    <!-- UI.Logic tests: PipeClient + view models (no WPF dependencies). -->
     <ProjectReference Include="..\TradeCopilot.UI.Logic\TradeCopilot.UI.Logic.csproj" />
   </ItemGroup>
 

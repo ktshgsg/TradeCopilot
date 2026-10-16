@@ -6,6 +6,7 @@ using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Processing;
+using TradeCopilot.Core.Setup;
 using TradeCopilot.Core.Speech;
 using TradeCopilot.Core.Vision;
 
@@ -118,6 +119,7 @@ public sealed class StartupHostedService : IHostedService
         _log.LogInformation("TradeCopilot starting, version {Version}", Version);
 
         await InitializeEnginesAsync(cancellationToken).ConfigureAwait(false);
+        LogDegradedMode();
         await WarmUpAsync(cancellationToken).ConfigureAwait(false);
         WirePipeline();
         await _capture.StartAsync(_opts.Capture.Region(), _opts.Capture.Fps, cancellationToken)
@@ -233,6 +235,32 @@ public sealed class StartupHostedService : IHostedService
                 "{Name} init: enabled=false in {ElapsedMs}ms",
                 name,
                 stopwatch.ElapsedMilliseconds);
+        }
+    }
+
+    /// <summary>
+    /// Logs one DEGRADED MODE warning per engine whose model file is missing. The
+    /// first-run wizard in the UI downloads them; the service itself must never crash
+    /// over a missing model.
+    /// </summary>
+    private void LogDegradedMode()
+    {
+        try
+        {
+            foreach (string engine in ModelManifest
+                .Missing(ModelManifest.DefaultBaseDirectory)
+                .Select(ModelManifest.EngineName)
+                .Distinct()
+                .OrderBy(e => e, StringComparer.Ordinal))
+            {
+                _log.LogWarning(
+                    "Running in DEGRADED MODE — {Engine} disabled. Run the first-run wizard in the UI to download models.",
+                    engine);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.LogWarning(ex, "Degraded-mode check failed; continuing.");
         }
     }
 

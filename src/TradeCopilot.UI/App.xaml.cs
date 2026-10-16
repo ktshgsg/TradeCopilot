@@ -1,9 +1,12 @@
 using System.IO;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using TradeCopilot.Core.Setup;
 using TradeCopilot.Core.Speech;
 using TradeCopilot.UI.Infrastructure;
 using TradeCopilot.UI.Logic;
@@ -50,6 +53,16 @@ public partial class App : Application
 
         services.AddSingleton(new SettingsStore());
         services.AddSingleton(sp => sp.GetRequiredService<SettingsStore>().Load());
+
+        // First-run wizard: a dedicated HttpClient (the downloader configures the
+        // timeout and user agent at construction) plus the manifest-driven downloader.
+        services.AddSingleton(_ => new HttpClient());
+        services.AddSingleton(sp => new ModelDownloader(
+            sp.GetRequiredService<HttpClient>(),
+            NullLogger<ModelDownloader>.Instance));
+        services.AddTransient(sp => new FirstRunViewModel(
+            sp.GetRequiredService<ModelDownloader>(),
+            NullLogger<FirstRunViewModel>.Instance));
         services.AddTransient(_ => new ConsentWindow(ConsentGate.DefaultFlagPath));
         // Singleton: the overlay and the Settings dialog resolve the SAME instance so
         // the push-to-talk toggle and the chat state stay in sync. A second resolve must
@@ -79,7 +92,25 @@ public partial class App : Application
             }
         }
 
+        // First-run models: show the downloader wizard once (flag file missing and
+        // models absent). Afterwards a missing model set puts the overlay in degraded
+        // mode with a persistent banner.
+        var firstRun = _services.GetRequiredService<FirstRunViewModel>();
+        bool modelsPresent = ModelManifest.AllPresent(firstRun.BaseDirectory);
+        if (FirstRunGate.ShouldShow(FirstRunGate.DefaultFlagPath, modelsPresent))
+        {
+            var wizard = new FirstRunWindow(firstRun);
+            wizard.ShowDialog();
+            modelsPresent = ModelManifest.AllPresent(firstRun.BaseDirectory);
+        }
+
         var viewModel = _services.GetRequiredService<MainViewModel>();
+        if (!modelsPresent)
+        {
+            NullLogger<App>.Instance.LogWarning("Running in degraded mode: required AI models are missing; rules and cache only.");
+            viewModel.DegradedMode = true;
+        }
+
         var window = new MainWindow(viewModel);
         MainWindow = window;
         viewModel.OpenSettingsRequested += () => OpenSettings(window);
@@ -136,6 +167,11 @@ public partial class App : Application
             if (_services.GetService(typeof(IPipeClient)) is IAsyncDisposable pipe)
             {
                 pipe.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
+
+            if (_services.GetService(typeof(HttpClient)) is HttpClient http)
+            {
+                http.Dispose();
             }
 
             _services.Dispose();

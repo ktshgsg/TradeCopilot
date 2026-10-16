@@ -69,6 +69,14 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _micAvailable;
 
+    /// <summary>True when required AI models are missing (degraded mode: rules + cache only).</summary>
+    [ObservableProperty]
+    private bool _degradedMode;
+
+    /// <summary>Amber banner text shown when <see cref="DegradedMode"/> is true.</summary>
+    [ObservableProperty]
+    private string _degradedBannerText = "Degraded mode: AI models are not downloaded, so AI answers and voice are disabled. Rules and cache still work.";
+
     /// <summary>True when a microphone recorder was injected (independent of the Settings toggle).</summary>
     public bool HasRecorder => _audio is not null;
 
