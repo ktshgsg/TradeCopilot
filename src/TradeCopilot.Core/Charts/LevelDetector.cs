@@ -71,7 +71,8 @@ public static class LevelDetector
                     Price: levelY,
                     Type: type,
                     TouchCount: touches,
-                    BoundingBox: new Rect(0, levelY - 1, candles[0].BoundingBox.Width, 2)));
+                    BoundingBox: new Rect(0, levelY - 1, candles[0].BoundingBox.Width, 2),
+                    IsPriceMapped: false));
             }
         }
 

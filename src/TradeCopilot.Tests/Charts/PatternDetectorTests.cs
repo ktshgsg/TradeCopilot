@@ -8,7 +8,7 @@ namespace TradeCopilot.Tests.Charts;
 public sealed class PatternDetectorTests
 {
     private static Candle MakeCandle(int index, float high, float low, float close, bool bullish = true) =>
-        new(high, high, low, close, index, bullish, new Rect(index * 10, low, 8, high - low));
+        new(high, high, low, close, index, bullish, new Rect(index * 10, low, 8, high - low), IsPriceMapped: false);
 
     /// <summary>Too few candles returns no patterns.</summary>
     [Fact]

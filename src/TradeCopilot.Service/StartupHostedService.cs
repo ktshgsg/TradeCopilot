@@ -111,7 +111,10 @@ public sealed class StartupHostedService : IHostedService
         _audit = audit ?? NoopAuditSink.Instance;
         _privacy = privacy ?? opts.Privacy;
         _counters = counters ?? new PrivacyGateCounters();
-        _chartAnalyzer = chartAnalyzer ?? new ChartAnalyzer();
+        // DI supplies ChartAnalyzer with a real PriceAxisMapper; this fallback
+        // (tests / manual construction) uses a null-logger mapper.
+        _chartAnalyzer = chartAnalyzer ?? new ChartAnalyzer(
+            new PriceAxisMapper(Microsoft.Extensions.Logging.Abstractions.NullLogger<PriceAxisMapper>.Instance));
     }
 
     /// <summary>Service version reported in the startup log.</summary>
@@ -353,8 +356,9 @@ public sealed class StartupHostedService : IHostedService
                     }
                 }
 
+                var region = new CaptureRegion(0, 0, processed.Frame.Width, processed.Frame.Height);
                 ChartState chartState = _chartAnalyzer.Enabled
-                    ? _chartAnalyzer.Analyze(processed.Frame)
+                    ? _chartAnalyzer.Analyze(processed.Frame, region, processed.Ocr)
                     : new ChartState([], [], [], [], processed.Frame.Width, processed.Frame.Height);
 
                 _state.Update(processed.Ocr, processed.Patterns, processed.Frame, chartState);

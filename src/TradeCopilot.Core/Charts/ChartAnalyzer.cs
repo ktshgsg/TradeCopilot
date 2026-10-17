@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using TradeCopilot.Core.Capture;
+using TradeCopilot.Core.Ocr;
 
 namespace TradeCopilot.Core.Charts;
 
@@ -17,7 +18,7 @@ public interface IChartAnalyzer
     /// Analyzes a frame and returns the chart state. Returns an empty ChartState
     /// (IsEmpty = true) when the analyzer is disabled or too few candles are found.
     /// </summary>
-    ChartState Analyze(FrameData frame);
+    ChartState Analyze(FrameData frame, CaptureRegion region, OcrResult ocr);
 }
 
 /// <summary>
@@ -28,11 +29,14 @@ public interface IChartAnalyzer
 public sealed class ChartAnalyzer : IChartAnalyzer
 {
     private readonly ILogger<ChartAnalyzer> _log;
+    private readonly PriceAxisMapper _priceMapper;
 
     /// <summary>Creates the analyzer.</summary>
+    /// <param name="priceMapper">Maps pixel Y to real price using OCR axis labels.</param>
     /// <param name="logger">Logger (defaults to null logger).</param>
-    public ChartAnalyzer(ILogger<ChartAnalyzer>? logger = null)
+    public ChartAnalyzer(PriceAxisMapper priceMapper, ILogger<ChartAnalyzer>? logger = null)
     {
+        _priceMapper = priceMapper;
         _log = logger ?? NullLogger<ChartAnalyzer>.Instance;
         Enabled = true;
     }
@@ -41,19 +45,20 @@ public sealed class ChartAnalyzer : IChartAnalyzer
     public bool Enabled { get; }
 
     /// <inheritdoc />
-    public ChartState Analyze(FrameData frame)
+    public ChartState Analyze(FrameData frame, CaptureRegion region, OcrResult ocr)
     {
         ArgumentNullException.ThrowIfNull(frame);
+        ArgumentNullException.ThrowIfNull(ocr);
 
         if (!Enabled)
         {
             return Empty(frame);
         }
 
-        IReadOnlyList<Candle> candles;
+        IReadOnlyList<Candle> rawCandles;
         try
         {
-            candles = CandleExtractor.Extract(frame);
+            rawCandles = CandleExtractor.Extract(frame);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -61,20 +66,56 @@ public sealed class ChartAnalyzer : IChartAnalyzer
             return Empty(frame);
         }
 
-        if (candles.Count < 5)
+        if (rawCandles.Count < 5)
         {
             return new ChartState(
-                Candles: candles,
+                Candles: rawCandles,
                 Trendlines: [],
                 Levels: [],
                 Patterns: [],
                 FrameWidth: frame.Width,
-                FrameHeight: frame.Height);
+                FrameHeight: frame.Height,
+                PricesAreMapped: false);
+        }
+
+        // Step 2a: Build price axis mapper from OCR labels.
+        Func<float, float>? mapper = _priceMapper.BuildMapper(ocr, region.Width);
+
+        // Step 2b: Map candles if the axis was detected.
+        IReadOnlyList<Candle> candles;
+        bool pricesAreMapped;
+        if (mapper is not null)
+        {
+            pricesAreMapped = true;
+            candles = rawCandles.Select(c => new Candle(
+                Open: mapper(c.Open),
+                High: mapper(c.High),
+                Low: mapper(c.Low),
+                Close: mapper(c.Close),
+                Index: c.Index,
+                IsBullish: c.IsBullish,
+                BoundingBox: c.BoundingBox,
+                IsPriceMapped: true)).ToList();
+        }
+        else
+        {
+            pricesAreMapped = false;
+            // Keep pixel values and mark as unmapped.
+            candles = rawCandles.Select(c => new Candle(
+                Open: c.Open,
+                High: c.High,
+                Low: c.Low,
+                Close: c.Close,
+                Index: c.Index,
+                IsBullish: c.IsBullish,
+                BoundingBox: c.BoundingBox,
+                IsPriceMapped: false)).ToList();
         }
 
         IReadOnlyList<Trendline> trendlines;
         try
         {
+            // Trendlines need mapped prices for meaningful slope analysis.
             trendlines = TrendlineDetector.Detect(candles);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -86,6 +127,7 @@ public sealed class ChartAnalyzer : IChartAnalyzer
         IReadOnlyList<SupportResistance> levels;
         try
         {
+            // Levels are detected on the mapped (or raw) candles.
             levels = LevelDetector.Detect(candles);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -97,7 +139,9 @@ public sealed class ChartAnalyzer : IChartAnalyzer
         IReadOnlyList<DetectedPattern> patterns;
         try
         {
-            patterns = PatternDetector.Detect(candles);
+            // Patterns use fixed pixel thresholds and y-down comparisons, so they
+            // always run on the raw pixel-space candles.
+            patterns = PatternDetector.Detect(rawCandles);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -111,7 +155,8 @@ public sealed class ChartAnalyzer : IChartAnalyzer
             Levels: levels,
             Patterns: patterns,
             FrameWidth: frame.Width,
-            FrameHeight: frame.Height);
+            FrameHeight: frame.Height,
+            PricesAreMapped: pricesAreMapped);
     }
 
     private static ChartState Empty(FrameData frame) =>

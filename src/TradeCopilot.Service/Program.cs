@@ -41,6 +41,8 @@ builder.Services.AddSingleton<IOcrEngine>(sp => new WindowsOcrEngine(
 builder.Services.AddSingleton<IChartPatternDetector>(_ => DisabledChartPatternDetector.Instance);
 
 // Classical CV chart analyzer (default chart reader; Moondream2 stays opt-in).
+builder.Services.AddSingleton(sp => new PriceAxisMapper(
+    sp.GetRequiredService<ILogger<PriceAxisMapper>>()));
 builder.Services.AddSingleton<IChartAnalyzer, ChartAnalyzer>();
 
 // OnnxEmbeddingProvider is wired later; the cache must not depend on the model file.

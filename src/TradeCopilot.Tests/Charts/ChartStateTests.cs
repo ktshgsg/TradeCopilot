@@ -9,7 +9,7 @@ namespace TradeCopilot.Tests.Charts;
 public sealed class ChartStateTests
 {
     private static Candle MakeCandle(int index, float open, float high, float low, float close, bool isBullish = true) =>
-        new(open, high, low, close, index, isBullish, new Rect(index * 10, 0, 8, 8));
+        new(open, high, low, close, index, isBullish, new Rect(index * 10, 0, 8, 8), IsPriceMapped: false);
 
     /// <summary>An empty ChartState reports IsEmpty = true.</summary>
     [Fact]
@@ -36,7 +36,7 @@ public sealed class ChartStateTests
     public void Candle_DifferentValues_CreatesNewInstance()
     {
         var c = MakeCandle(0, 100, 105, 99, 104);
-        var modified = new Candle(90f, c.High, c.Low, c.Close, c.Index, c.IsBullish, c.BoundingBox);
+        var modified = new Candle(90f, c.High, c.Low, c.Close, c.Index, c.IsBullish, c.BoundingBox, c.IsPriceMapped);
         c.Open.Should().Be(100f);
         modified.Open.Should().Be(90f);
         modified.IsBullish.Should().BeTrue();
@@ -56,8 +56,8 @@ public sealed class ChartStateTests
     [Fact]
     public void SupportResistance_Equality()
     {
-        var a = new SupportResistance(100f, LevelType.Support, 3, new Rect(0, 90, 100, 5));
-        var b = new SupportResistance(100f, LevelType.Support, 3, new Rect(0, 90, 100, 5));
+        var a = new SupportResistance(100f, LevelType.Support, 3, new Rect(0, 90, 100, 5), IsPriceMapped: false);
+        var b = new SupportResistance(100f, LevelType.Support, 3, new Rect(0, 90, 100, 5), IsPriceMapped: false);
         a.Should().Be(b);
         a.Type.Should().Be(LevelType.Support);
     }

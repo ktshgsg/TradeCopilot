@@ -150,7 +150,8 @@ public static class CandleExtractor
                 Close: closePx,
                 Index: index++,
                 IsBullish: isBullish,
-                BoundingBox: bbox));
+                BoundingBox: bbox,
+                IsPriceMapped: false));
         }
     }
 

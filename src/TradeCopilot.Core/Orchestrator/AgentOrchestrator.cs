@@ -181,7 +181,7 @@ public sealed class AgentOrchestrator
 
         try
         {
-            string system = PromptBuilder.BuildSystemPrompt();
+            string system = PromptBuilder.BuildSystemPrompt(snapshot.ChartState);
             string user = PromptBuilder.BuildUserPrompt(
                 query,
                 snapshot.Ocr,

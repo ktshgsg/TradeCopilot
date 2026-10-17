@@ -8,7 +8,7 @@ namespace TradeCopilot.Tests.Charts;
 public sealed class TrendlineDetectorTests
 {
     private static Candle MakeCandle(int index, float open, float high, float low, float close, bool bullish = true) =>
-        new(open, high, low, close, index, bullish, new Rect(index * 10, 0, 8, 8));
+        new(open, high, low, close, index, bullish, new Rect(index * 10, 0, 8, 8), IsPriceMapped: false);
 
     /// <summary>Too few candles returns no trendlines.</summary>
     [Fact]

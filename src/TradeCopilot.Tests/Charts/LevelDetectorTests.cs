@@ -8,7 +8,7 @@ namespace TradeCopilot.Tests.Charts;
 public sealed class LevelDetectorTests
 {
     private static Candle MakeCandle(int index, float high, float low) =>
-        new(high, high, low, 0, index, true, new Rect(index * 10, low, 8, high - low));
+        new(high, high, low, 0, index, true, new Rect(index * 10, low, 8, high - low), IsPriceMapped: false);
 
     /// <summary>Too few candles returns no levels.</summary>
     [Fact]

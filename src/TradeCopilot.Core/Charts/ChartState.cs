@@ -13,6 +13,7 @@ namespace TradeCopilot.Core.Charts;
 /// <param name="Index">Zero-based bar index within the visible chart area.</param>
 /// <param name="IsBullish">True when close &gt;= open.</param>
 /// <param name="BoundingBox">Candle body bounds in frame pixels.</param>
+/// <param name="IsPriceMapped">True when prices were mapped from pixels to real values via the OCR price axis.</param>
 public sealed record Candle(
     float Open,
     float High,
@@ -20,7 +21,8 @@ public sealed record Candle(
     float Close,
     int Index,
     bool IsBullish,
-    Rect BoundingBox);
+    Rect BoundingBox,
+    bool IsPriceMapped);
 
 /// <summary>
 /// A trendline fitted to swing highs (resistance) or swing lows (support).
@@ -54,11 +56,13 @@ public enum TrendlineType
 /// <param name="Type">Support or resistance.</param>
 /// <param name="TouchCount">Number of times price touched this level.</param>
 /// <param name="BoundingBox">Level bounds in frame pixels.</param>
+/// <param name="IsPriceMapped">True when the price level was mapped from pixels to real values.</param>
 public sealed record SupportResistance(
     float Price,
     LevelType Type,
     int TouchCount,
-    Rect BoundingBox);
+    Rect BoundingBox,
+    bool IsPriceMapped);
 
 /// <summary>Kind of level.</summary>
 public enum LevelType
@@ -92,13 +96,15 @@ public sealed record DetectedPattern(
 /// <param name="Patterns">Detected chart patterns.</param>
 /// <param name="FrameWidth">Source frame width in pixels.</param>
 /// <param name="FrameHeight">Source frame height in pixels.</param>
+/// <param name="PricesAreMapped">True when candle prices were mapped from pixels to real values via the OCR price axis.</param>
 public sealed record ChartState(
     IReadOnlyList<Candle> Candles,
     IReadOnlyList<Trendline> Trendlines,
     IReadOnlyList<SupportResistance> Levels,
     IReadOnlyList<DetectedPattern> Patterns,
     int FrameWidth,
-    int FrameHeight)
+    int FrameHeight,
+    bool PricesAreMapped = false)
 {
     /// <summary>True when too few candles were detected to produce meaningful output.</summary>
     public bool IsEmpty => Candles.Count < 5;

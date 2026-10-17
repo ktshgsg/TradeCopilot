@@ -14,11 +14,24 @@ public static class PromptBuilder
     /// <summary>Maximum OCR characters (Unicode codepoints) included in the user prompt.</summary>
     public const int MaxOcrCodepoints = 1500;
 
-    /// <summary>Returns the fixed system prompt.</summary>
-    public static string BuildSystemPrompt() =>
-        "You are TradeCopilot, an AI trading assistant.\n"
-        + "Reply in the user's language (English, Hindi, or Hinglish).\n"
-        + "Keep answers under 2 sentences and only cite numbers you see.";
+    /// <summary>Returns the system prompt. When a chart state is provided and its price
+    /// axis was not detected, a note is appended warning the model not to invent prices.</summary>
+    /// <param name="chartState">Latest chart state, when available.</param>
+    public static string BuildSystemPrompt(ChartState? chartState = null)
+    {
+        string prompt =
+            "You are TradeCopilot, an AI trading assistant.\n"
+            + "Reply in the user's language (English, Hindi, or Hinglish).\n"
+            + "Keep answers under 2 sentences and only cite numbers you see.";
+
+        if (chartState is not null && !chartState.PricesAreMapped)
+        {
+            prompt += "\nNote: The chart's price axis was not detected. Do not invent prices. "
+                + "Refer to 'support around pixel Y' or ask the user to show the axis.";
+        }
+
+        return prompt;
+    }
 
     /// <summary>
     /// Builds the Qwen2.5 chat prompt; the model generates the reply from the
@@ -70,18 +83,65 @@ public static class PromptBuilder
                 ? string.Join(", ", chartState.Trendlines.Select(t => $"{t.Type.ToString().ToLowerInvariant()} trendline ({t.TouchCount} touches)"))
                 : "no trendlines";
             var levelInfo = chartState.Levels.Count > 0
-                ? string.Join(", ", chartState.Levels.Select(l => $"{l.Type.ToString().ToLowerInvariant()} at px={l.Price:F0} ({l.TouchCount} touches)"))
+                ? string.Join(", ", chartState.Levels.Select(l => chartState.PricesAreMapped
+                    ? $"{l.Type.ToString().ToLowerInvariant()} at {l.Price:F2} ({l.TouchCount} touches)"
+                    : $"{l.Type.ToString().ToLowerInvariant()} at px={l.Price:F0} ({l.TouchCount} touches)"))
                 : "no levels";
             var patternInfo = chartState.Patterns.Count > 0
                 ? string.Join(", ", chartState.Patterns.Select(p => $"{p.Label} ({p.Confidence:F2})"))
                 : "no patterns";
-            chartLine = $"Chart: {candleInfo}; {trendlineInfo}; {levelInfo}; {patternInfo}";
+            var structureInfo = BuildChartStructure(chartState);
+            chartLine = $"Chart: {candleInfo}; {trendlineInfo}; {levelInfo}; {patternInfo}; {structureInfo}";
         }
 
         string cached = string.IsNullOrWhiteSpace(cachedContext) ? "none" : cachedContext;
         return string.Create(
             CultureInfo.InvariantCulture,
             $"[CHART CONTEXT]\n{ocrLine}\nPatterns: {patternText}\n{chartLine}\nCached: {cached}\n[USER QUERY]\n{query}");
+    }
+
+    /// <summary>Builds the last-close / nearest-support / nearest-resistance lines using
+    /// real prices when the axis was mapped, or pixel positions otherwise.</summary>
+    private static string BuildChartStructure(ChartState chartState)
+    {
+        var last = chartState.Candles.Count > 0 ? chartState.Candles[^1] : null;
+        var support = chartState.Levels.FirstOrDefault(l => l.Type == LevelType.Support);
+        var resistance = chartState.Levels.FirstOrDefault(l => l.Type == LevelType.Resistance);
+
+        string closePart;
+        if (last is null)
+        {
+            closePart = "Last close: none";
+        }
+        else if (chartState.PricesAreMapped)
+        {
+            string direction = last.IsBullish ? "up" : "down";
+            closePart = string.Create(
+                CultureInfo.InvariantCulture, $"Last close: {last.Close:F2} ({direction})");
+        }
+        else
+        {
+            closePart = string.Create(
+                CultureInfo.InvariantCulture, $"Last close: at {last.Close:F0}px (price axis not visible — do NOT cite as price)");
+        }
+
+        string supportPart = support is null
+            ? "Nearest support: none"
+            : chartState.PricesAreMapped
+                ? string.Create(
+                    CultureInfo.InvariantCulture, $"Nearest support: {support.Price:F2} ({support.TouchCount} touches)")
+                : string.Create(
+                    CultureInfo.InvariantCulture, $"Nearest support: at {support.Price:F0}px");
+
+        string resistancePart = resistance is null
+            ? "Nearest resistance: none"
+            : chartState.PricesAreMapped
+                ? string.Create(
+                    CultureInfo.InvariantCulture, $"Nearest resistance: {resistance.Price:F2} ({resistance.TouchCount} touches)")
+                : string.Create(
+                    CultureInfo.InvariantCulture, $"Nearest resistance: at {resistance.Price:F0}px");
+
+        return $"{closePart}; {supportPart}; {resistancePart}";
     }
 
     /// <summary>Truncates at a codepoint boundary without splitting surrogate pairs.</summary>
