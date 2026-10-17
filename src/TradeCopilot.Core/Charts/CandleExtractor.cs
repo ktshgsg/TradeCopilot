@@ -1,8 +1,9 @@
 #pragma warning disable IDE0005 // FrameData is referenced but analyzer doesn't detect it
-using System.Runtime.InteropServices;
 using TradeCopilot.Core.Capture;
 #pragma warning restore IDE0005
 
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenCvSharp;
 using Rect = TradeCopilot.Core.Vision.Rect;
 
@@ -41,21 +42,53 @@ public static class CandleExtractor
     /// Returns an empty list when no candles are found.
     /// </summary>
     /// <param name="frame">Captured BGRA frame.</param>
+    /// <param name="logger">Optional logger for fault-tolerance warnings.</param>
     /// <returns>Detected candles in pixel-space OHLC, sorted by index.</returns>
-    public static IReadOnlyList<Candle> Extract(FrameData frame)
+    public static IReadOnlyList<Candle> Extract(FrameData frame, ILogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(frame);
+
+        ILogger log = logger ?? NullLogger.Instance;
 
         if (frame.Pixels is null or { Length: 0 })
         {
             return [];
         }
 
-        using var bgra = new Mat(frame.Height, frame.Width, MatType.CV_8UC4);
-        unsafe
+        if (frame.Width <= 0 || frame.Height <= 0 || frame.Stride <= 0)
         {
-            Marshal.Copy(frame.Pixels, 0, (IntPtr)bgra.DataPointer, frame.Pixels.Length);
+            log.LogWarning(
+                "Invalid frame dimensions {W}x{H} stride {Stride}; skipping candle extraction.",
+                frame.Width, frame.Height, frame.Stride);
+            return [];
         }
+
+        if (frame.Pixels.Length < frame.Stride * frame.Height)
+        {
+            throw new ArgumentException("Frame buffer is too small for declared dimensions.");
+        }
+
+        try
+        {
+            return ExtractCore(frame);
+        }
+        catch (ArgumentException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            log.LogWarning(ex, "Candle extraction failed; returning empty list.");
+            return [];
+        }
+    }
+
+    private static List<Candle> ExtractCore(FrameData frame)
+    {
+        int required = frame.Stride * frame.Height;
+        var copy = new byte[required];
+        Buffer.BlockCopy(frame.Pixels, 0, copy, 0, required);
+        using var bgra = Mat.FromPixelData(frame.Height, frame.Width, MatType.CV_8UC4, copy);
 
         // BGRA → BGR → HSV for colour-based candle body segmentation.
         using var bgr = new Mat();

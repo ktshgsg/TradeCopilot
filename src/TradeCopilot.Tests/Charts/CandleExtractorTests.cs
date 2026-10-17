@@ -92,6 +92,24 @@ public sealed class CandleExtractorTests
         candles.Should().BeEmpty();
     }
 
+    /// <summary>An undersized pixel buffer throws instead of corrupting native memory.</summary>
+    [Fact]
+    public void UndersizedBuffer_ThrowsArgumentException()
+    {
+        var frame = new FrameData(100, 100, 400, new byte[100], DateTime.UtcNow, 1);
+        Action act = () => CandleExtractor.Extract(frame);
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*too small for declared dimensions*");
+    }
+
+    /// <summary>Invalid dimensions return empty instead of crashing the process.</summary>
+    [Fact]
+    public void InvalidDimensions_ReturnEmpty()
+    {
+        var frame = new FrameData(0, 100, 400, new byte[100], DateTime.UtcNow, 1);
+        CandleExtractor.Extract(frame).Should().BeEmpty();
+    }
+
     private static void FillBar(byte[] pixels, int width, int barX, int barWidth, int barTop, int barBottom, byte b, byte g, byte r)
     {
         for (int y = barTop; y < barBottom; y++)

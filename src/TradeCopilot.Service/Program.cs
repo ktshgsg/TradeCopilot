@@ -15,6 +15,16 @@ using TradeCopilot.Service;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Resolve model/data paths (models/, tools/, data/) against the solution root
+// so they work whether the process starts from the repo root, the service
+// folder, or bin/Release. AppContext.BaseDirectory points deep into
+// bin/Release/net8.0-windows.../ so walk up to the TradeCopilot.sln marker.
+var rootPath = FindSolutionRoot(AppContext.BaseDirectory)
+    ?? FindSolutionRoot(Environment.CurrentDirectory)
+    ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
+builder.Environment.ContentRootPath = rootPath;
+Environment.CurrentDirectory = rootPath;
+
 // Console logging only: no file sinks. The installer can redirect stdout/stderr.
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
@@ -100,3 +110,19 @@ builder.Services.AddHostedService<CacheMaintenanceService>();
 
 var host = builder.Build();
 await host.RunAsync();
+
+static string? FindSolutionRoot(string start)
+{
+    var directory = new DirectoryInfo(start);
+    while (directory is not null)
+    {
+        if (File.Exists(Path.Combine(directory.FullName, "TradeCopilot.sln")))
+        {
+            return directory.FullName;
+        }
+
+        directory = directory.Parent;
+    }
+
+    return null;
+}
