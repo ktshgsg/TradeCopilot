@@ -42,6 +42,8 @@ dotnet_diagnostic.CA1062.severity = none
 dotnet_diagnostic.CA1303.severity = none
 dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CA1848.severity = none
+dotnet_diagnostic.CA1873.severity = none
+dotnet_diagnostic.CA1875.severity = none
 
 # Nullable-reference-types: uninitialized non-nullable refs must be fixed, not warned
 dotnet_diagnostic.CS8618.severity = error

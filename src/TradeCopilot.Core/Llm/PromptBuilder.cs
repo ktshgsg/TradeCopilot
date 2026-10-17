@@ -1,4 +1,5 @@
 using System.Globalization;
+using TradeCopilot.Core.Charts;
 using TradeCopilot.Core.Ocr;
 using TradeCopilot.Core.Vision;
 
@@ -38,12 +39,14 @@ public static class PromptBuilder
     /// <param name="query">User query.</param>
     /// <param name="ocr">Latest OCR result, when available.</param>
     /// <param name="patterns">Detected patterns, when available.</param>
+    /// <param name="chartState">Classical CV chart analysis result, when available.</param>
     /// <param name="cachedContext">Previously cached answer for similar context, when available.</param>
     public static string BuildUserPrompt(
         string query,
         OcrResult? ocr,
         IReadOnlyList<PatternDetection> patterns,
-        string? cachedContext)
+        ChartState? chartState = null,
+        string? cachedContext = null)
     {
         string ocrText = TruncateCodepoints(ocr?.FullText ?? string.Empty, MaxOcrCodepoints);
         string ocrLine = ocrText.Length == 0 ? "OCR:" : "OCR: " + ocrText;
@@ -52,10 +55,33 @@ public static class PromptBuilder
             : string.Join(
                 ", ",
                 patterns.Select(p => string.Create(CultureInfo.InvariantCulture, $"{p.Label} ({p.Confidence:F2})")));
+
+        string chartLine;
+        if (chartState is null || chartState.IsEmpty)
+        {
+            chartLine = "Chart: none";
+        }
+        else
+        {
+            var candleInfo = chartState.Candles.Count > 0
+                ? $"{chartState.Candles.Count} candles"
+                : "no candles";
+            var trendlineInfo = chartState.Trendlines.Count > 0
+                ? string.Join(", ", chartState.Trendlines.Select(t => $"{t.Type.ToString().ToLowerInvariant()} trendline ({t.TouchCount} touches)"))
+                : "no trendlines";
+            var levelInfo = chartState.Levels.Count > 0
+                ? string.Join(", ", chartState.Levels.Select(l => $"{l.Type.ToString().ToLowerInvariant()} at px={l.Price:F0} ({l.TouchCount} touches)"))
+                : "no levels";
+            var patternInfo = chartState.Patterns.Count > 0
+                ? string.Join(", ", chartState.Patterns.Select(p => $"{p.Label} ({p.Confidence:F2})"))
+                : "no patterns";
+            chartLine = $"Chart: {candleInfo}; {trendlineInfo}; {levelInfo}; {patternInfo}";
+        }
+
         string cached = string.IsNullOrWhiteSpace(cachedContext) ? "none" : cachedContext;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"[CHART CONTEXT]\n{ocrLine}\nPatterns: {patternText}\nCached: {cached}\n[USER QUERY]\n{query}");
+            $"[CHART CONTEXT]\n{ocrLine}\nPatterns: {patternText}\n{chartLine}\nCached: {cached}\n[USER QUERY]\n{query}");
     }
 
     /// <summary>Truncates at a codepoint boundary without splitting surrogate pairs.</summary>

@@ -123,7 +123,13 @@ public sealed class AgentOrchestrator
 
         try
         {
-            RuleResult ruleResult = _rules.Evaluate(query, snapshot.Ocr ?? OcrResult.Empty, snapshot.Patterns);
+            // Merge OpenCV-detected chart patterns with YOLO/vision patterns so the rule
+            // engine can fire on classical CV detections (double top, head & shoulders, flags, etc.).
+            var chartPatterns = snapshot.ChartState.Patterns
+                .Select(p => new PatternDetection(p.Label, p.Confidence, p.BoundingBox));
+            var allPatterns = snapshot.Patterns.Concat(chartPatterns).ToList();
+
+            RuleResult ruleResult = _rules.Evaluate(query, snapshot.Ocr ?? OcrResult.Empty, allPatterns);
             if (ruleResult.Matched)
             {
                 await TryStoreAsync(query, ruleResult.AnswerText, langCode, snapshot.ContextHash, ct)
@@ -180,6 +186,7 @@ public sealed class AgentOrchestrator
                 query,
                 snapshot.Ocr,
                 snapshot.Patterns,
+                snapshot.ChartState,
                 cacheResult?.AnswerText);
             string answer = await _llm.CompleteAsync(system, user, ct).ConfigureAwait(false);
 

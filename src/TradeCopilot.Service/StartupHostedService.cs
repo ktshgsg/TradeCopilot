@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
+using TradeCopilot.Core.Charts;
 using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
@@ -38,6 +39,7 @@ public sealed class StartupHostedService : IHostedService
     private readonly IAuditSink _audit;
     private readonly PrivacyOptions _privacy;
     private readonly PrivacyGateCounters _counters;
+    private readonly IChartAnalyzer _chartAnalyzer;
     private readonly ILogger<StartupHostedService> _log;
 
     private EventHandler<FrameData>? _frameHandler;
@@ -60,6 +62,7 @@ public sealed class StartupHostedService : IHostedService
     /// <param name="audit">Content-free audit sink.</param>
     /// <param name="privacy">Privacy gate options.</param>
     /// <param name="counters">Shared privacy exclusion counters.</param>
+    /// <param name="chartAnalyzer">Classical CV chart analyzer (defaults to ChartAnalyzer).</param>
     /// <param name="log">Logger.</param>
     public StartupHostedService(
         ISemanticCache cache,
@@ -77,7 +80,8 @@ public sealed class StartupHostedService : IHostedService
         IWindowFilter? windowFilter = null,
         IAuditSink? audit = null,
         PrivacyOptions? privacy = null,
-        PrivacyGateCounters? counters = null)
+        PrivacyGateCounters? counters = null,
+        IChartAnalyzer? chartAnalyzer = null)
     {
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(llm);
@@ -107,6 +111,7 @@ public sealed class StartupHostedService : IHostedService
         _audit = audit ?? NoopAuditSink.Instance;
         _privacy = privacy ?? opts.Privacy;
         _counters = counters ?? new PrivacyGateCounters();
+        _chartAnalyzer = chartAnalyzer ?? new ChartAnalyzer();
     }
 
     /// <summary>Service version reported in the startup log.</summary>
@@ -348,7 +353,11 @@ public sealed class StartupHostedService : IHostedService
                     }
                 }
 
-                _state.Update(processed.Ocr, processed.Patterns, processed.Frame);
+                ChartState chartState = _chartAnalyzer.Enabled
+                    ? _chartAnalyzer.Analyze(processed.Frame)
+                    : new ChartState([], [], [], [], processed.Frame.Width, processed.Frame.Height);
+
+                _state.Update(processed.Ocr, processed.Patterns, processed.Frame, chartState);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {

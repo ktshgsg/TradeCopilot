@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
+using TradeCopilot.Core.Charts;
 using TradeCopilot.Core.Embeddings;
 using TradeCopilot.Core.Llm;
 using TradeCopilot.Core.Ocr;
@@ -38,6 +39,9 @@ builder.Services.AddSingleton<IOcrEngine>(sp => new WindowsOcrEngine(
 
 // YOLO is wired later; the pipeline must not depend on the ONNX file being present.
 builder.Services.AddSingleton<IChartPatternDetector>(_ => DisabledChartPatternDetector.Instance);
+
+// Classical CV chart analyzer (default chart reader; Moondream2 stays opt-in).
+builder.Services.AddSingleton<IChartAnalyzer, ChartAnalyzer>();
 
 // OnnxEmbeddingProvider is wired later; the cache must not depend on the model file.
 builder.Services.AddSingleton<IEmbeddingProvider>(_ => new FakeEmbeddingProvider());

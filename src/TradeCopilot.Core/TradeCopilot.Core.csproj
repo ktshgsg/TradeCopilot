@@ -16,6 +16,9 @@
     <!-- OCR / Vision -->
     <PackageReference Include="Microsoft.ML.OnnxRuntime" />
     <PackageReference Include="Microsoft.ML.Tokenizers" />
+    <!-- OpenCV (default classical chart reader; Moondream2 stays opt-in GPU path) -->
+    <PackageReference Include="OpenCvSharp4" />
+    <PackageReference Include="OpenCvSharp4.runtime.win" />
     <!-- MoondreamVisionEngine encodes captured frames to PNG via System.Drawing. -->
     <PackageReference Include="System.Drawing.Common" />
 

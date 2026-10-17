@@ -10,6 +10,8 @@
     <IsTestProject>true</IsTestProject>
     <!-- xUnit method names use underscores for readability (Given_When_Then style); CA1707 does not apply. -->
     <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <!-- Native OpenCvSharp binaries live in the win-x64 runtime pack. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>

@@ -114,6 +114,7 @@ public sealed class LlmTests
                 new PatternDetection(PatternLabels.BullFlag, 0.72f, new Rect(0, 0, 10, 10)),
                 new PatternDetection(PatternLabels.DoubleTop, 0.50f, new Rect(0, 0, 10, 10)),
             ],
+            null,
             "RSI 72 pe hai, overbought zone.");
 
         prompt.Should().Contain("Patterns: bull_flag (0.72), double_top (0.50)");
@@ -124,7 +125,7 @@ public sealed class LlmTests
     [Fact]
     public void BuildUserPrompt_NullOcr_HasNoTrailingWhitespace()
     {
-        string prompt = PromptBuilder.BuildUserPrompt("q", null, [], "");
+        string prompt = PromptBuilder.BuildUserPrompt("q", null, [], null, "");
 
         prompt.Should().Contain("OCR:").And.Contain("Cached: none");
         prompt.Split('\n').Should().AllSatisfy(line => line.Should().Be(line.TrimEnd()));

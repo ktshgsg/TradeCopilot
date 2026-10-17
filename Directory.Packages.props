@@ -10,6 +10,9 @@
     <!-- OCR / Vision -->
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+    <!-- OpenCV (default classical chart reader; Moondream2 stays opt-in GPU path) -->
+    <PackageVersion Include="OpenCvSharp4" Version="4.10.0.20241108" />
+    <PackageVersion Include="OpenCvSharp4.runtime.win" Version="4.10.0.20241108" />
     <!-- Storage -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
