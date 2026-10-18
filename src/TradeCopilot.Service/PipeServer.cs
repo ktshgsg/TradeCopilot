@@ -140,7 +140,29 @@ public sealed class PipeServer : BackgroundService
 
             while (!ct.IsCancellationRequested && server.IsConnected)
             {
-                string? line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+                string? line;
+                try
+                {
+                    line = await reader.ReadLineAsync(ct).ConfigureAwait(false);
+                }
+                catch (IOException ex)
+                {
+                    // Client disconnected mid-request (e.g. slow LLM answer timed out
+                    // on the client side). Not a server failure — close cleanly.
+                    _log.LogInformation(
+                        "Pipe connection {ConnectionId}: client disconnected while reading ({Message}).",
+                        connectionId,
+                        ex.Message);
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    _log.LogInformation(
+                        "Pipe connection {ConnectionId}: pipe disposed while reading; closing cleanly.",
+                        connectionId);
+                    break;
+                }
+
                 if (line is null)
                 {
                     break;
@@ -159,13 +181,52 @@ public sealed class PipeServer : BackgroundService
                         : await DispatchAsync(request, connectionId, ct).ConfigureAwait(false);
                 }
 
-                await writer.WriteLineAsync(response.ToJson().AsMemory(), ct).ConfigureAwait(false);
-                await writer.FlushAsync(ct).ConfigureAwait(false);
+                if (!server.IsConnected)
+                {
+                    _log.LogInformation(
+                        "Pipe connection {ConnectionId}: client disconnected before response; dropping reply.",
+                        connectionId);
+                    break;
+                }
+
+                try
+                {
+                    await writer.WriteLineAsync(response.ToJson().AsMemory(), ct).ConfigureAwait(false);
+                    await writer.FlushAsync(ct).ConfigureAwait(false);
+                }
+                catch (IOException ex)
+                {
+                    _log.LogInformation(
+                        "Pipe connection {ConnectionId}: client disconnected before response ({Message}).",
+                        connectionId,
+                        ex.Message);
+                    break;
+                }
+                catch (ObjectDisposedException)
+                {
+                    _log.LogInformation(
+                        "Pipe connection {ConnectionId}: pipe disposed while writing; closing cleanly.",
+                        connectionId);
+                    break;
+                }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             // Shutting down: the loop caller disposes the pipe.
+        }
+        catch (IOException ex)
+        {
+            _log.LogInformation(
+                "Pipe connection {ConnectionId}: broken pipe ({Message}); closing cleanly.",
+                connectionId,
+                ex.Message);
+        }
+        catch (ObjectDisposedException)
+        {
+            _log.LogInformation(
+                "Pipe connection {ConnectionId}: pipe disposed; closing cleanly.",
+                connectionId);
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
@@ -223,6 +284,18 @@ public sealed class PipeServer : BackgroundService
     {
         QueryResult result = await _orch.AnswerAsync(request.Text ?? string.Empty, ct).ConfigureAwait(false);
         _audit.Write("AnswerSource", $"source={result.Source},ms={result.ElapsedMs}");
+        // Fire-and-forget: the UI already has its answer line, so speak without delaying it.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await _tts.SpeakAsync(result.AnswerText, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "TTS failed");
+            }
+        }, CancellationToken.None);
         return new PipeResponse
         {
             Type = "answer",

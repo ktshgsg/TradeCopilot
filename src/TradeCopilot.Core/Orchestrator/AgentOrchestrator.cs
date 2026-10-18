@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using TradeCopilot.Core.Charts;
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
@@ -123,24 +125,37 @@ public sealed class AgentOrchestrator
 
         try
         {
-            // Merge OpenCV-detected chart patterns with YOLO/vision patterns so the rule
-            // engine can fire on classical CV detections (double top, head & shoulders, flags, etc.).
-            var chartPatterns = snapshot.ChartState.Patterns
-                .Select(p => new PatternDetection(p.Label, p.Confidence, p.BoundingBox));
-            var allPatterns = snapshot.Patterns.Concat(chartPatterns).ToList();
-
-            RuleResult ruleResult = _rules.Evaluate(query, snapshot.Ocr ?? OcrResult.Empty, allPatterns);
-            if (ruleResult.Matched)
+            // Price-specific questions ("support kahan hai", "resistance?", targets/stops)
+            // must reach the LLM, which sees the mapped [CHART STRUCTURE] prices. The
+            // rule engine only emits generic pattern text, so skip it for these queries.
+            if (!QueryNeedsPrices(query))
             {
-                await TryStoreAsync(query, ruleResult.AnswerText, langCode, snapshot.ContextHash, ct)
-                    .ConfigureAwait(false);
-                QueryResult ruled = new(
-                    ruleResult.AnswerText,
-                    langCode,
-                    SourceRule,
-                    stopwatch.ElapsedMilliseconds);
-                LogAnswered(ruled, null);
-                return ruled;
+                // Merge OpenCV-detected chart patterns with YOLO/vision patterns so the rule
+                // engine can fire on classical CV detections (double top, head & shoulders, flags, etc.).
+                var chartPatterns = snapshot.ChartState.Patterns
+                    .Select(p => new PatternDetection(p.Label, p.Confidence, p.BoundingBox));
+                var allPatterns = snapshot.Patterns.Concat(chartPatterns).ToList();
+
+                RuleResult ruleResult = _rules.Evaluate(query, snapshot.Ocr ?? OcrResult.Empty, allPatterns);
+                if (ruleResult.Matched)
+                {
+                    // Append the mapped support/resistance price when the axis is visible so
+                    // pattern answers stay grounded instead of generic.
+                    string enriched = EnrichWithPrices(ruleResult.AnswerText, snapshot);
+                    await TryStoreAsync(query, enriched, langCode, snapshot.ContextHash, ct)
+                        .ConfigureAwait(false);
+                    QueryResult ruled = new(
+                        enriched,
+                        langCode,
+                        SourceRule,
+                        stopwatch.ElapsedMilliseconds);
+                    LogAnswered(ruled, null);
+                    return ruled;
+                }
+            }
+            else
+            {
+                _log.LogInformation("Price-specific query; skipping the rule engine and routing to the LLM.");
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -268,6 +283,64 @@ public sealed class AgentOrchestrator
         && result.ContextMatches
         && result.Similarity >= CacheSimilarityThreshold
         && !string.IsNullOrEmpty(result.AnswerText);
+
+    /// <summary>
+    /// Substrings (matched case-insensitively) that mark a question as price-specific,
+    /// so it skips the rule engine and goes straight to the LLM with [CHART STRUCTURE].
+    /// </summary>
+    private static readonly string[] PriceKeywords =
+    [
+        "support", "resistance", "level", "price", "target", "stop",
+    ];
+
+    /// <summary>True when the query asks for a concrete price and needs the LLM's mapped chart context.</summary>
+    private static bool QueryNeedsPrices(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return false;
+        }
+
+        foreach (string keyword in PriceKeywords)
+        {
+            if (query.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Appends the nearest mapped support/resistance price to a rule answer when the
+    /// price axis is visible; otherwise returns the answer unchanged.
+    /// </summary>
+    private static string EnrichWithPrices(string answer, AgentSnapshot snapshot)
+    {
+        ChartState chart = snapshot.ChartState;
+        if (!chart.PricesAreMapped || chart.Levels.Count == 0)
+        {
+            return answer;
+        }
+
+        SupportResistance? support = chart.Levels.FirstOrDefault(l => l.Type == LevelType.Support);
+        SupportResistance? resistance = chart.Levels.FirstOrDefault(l => l.Type == LevelType.Resistance);
+        var parts = new List<string>(2);
+        if (support is not null)
+        {
+            parts.Add(string.Create(
+                CultureInfo.InvariantCulture, $"Support {support.Price:F2} pe hai."));
+        }
+
+        if (resistance is not null)
+        {
+            parts.Add(string.Create(
+                CultureInfo.InvariantCulture, $"Resistance {resistance.Price:F2} pe hai."));
+        }
+
+        return parts.Count == 0 ? answer : answer + " " + string.Join(" ", parts);
+    }
 
     private void LogAnswered(QueryResult result, float? similarity)
     {

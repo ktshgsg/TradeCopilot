@@ -224,6 +224,9 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
 
+    /// <summary>Minimizes to the taskbar (the window uses ShowInTaskbar so it can be restored from there).</summary>
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
     /// <summary>Hides on Esc instead of closing.</summary>
     /// <param name="e">Key event.</param>
     protected override void OnKeyDown(KeyEventArgs e)

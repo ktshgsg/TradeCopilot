@@ -65,6 +65,9 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRecording;
 
+    /// <summary>Mic button caption: "Mic" idle, "Listening..." while recording.</summary>
+    public string MicButtonText => IsRecording ? "Listening..." : "Mic";
+
     /// <summary>Whether voice input is offered at all (recorder present and enabled in Settings).</summary>
     [ObservableProperty]
     private bool _micAvailable;
@@ -109,7 +112,22 @@ public sealed partial class MainViewModel : ObservableObject
         {
             // No ConfigureAwait(false): Messages is UI-bound, continuations must
             // return to the dispatcher thread.
-            PipeResponse resp = await _pipe.SendAsync(new PipeRequest("query", Text: userMessage.Text), ct);
+            PipeResponse resp;
+            try
+            {
+                resp = await _pipe.SendAsync(new PipeRequest("query", Text: userMessage.Text), ct);
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                // The pipe dropped mid-query (e.g. service killed). Keep the chat
+                // alive, reset the mic, and tell the user what happened.
+                ResetRecordingState();
+                Messages.Add(new ChatMessage(MessageRole.System, "Error: Service unreachable. Is the background service running?"));
+                StatusText = "Service unreachable";
+                _log.LogWarning(ex, "Query failed: service unreachable.");
+                return;
+            }
+
             if (resp.Type == "answer")
             {
                 Messages.Add(new ChatMessage(MessageRole.Assistant, resp.Text ?? string.Empty, resp.Source, resp.ElapsedMs));
@@ -226,8 +244,21 @@ public sealed partial class MainViewModel : ObservableObject
         {
             // AudioCapture.Start never throws (it logs and leaves IsRecording false when
             // the device is missing or held by the service), so mic contention is
-            // surfaced through the status line instead of an exception.
-            _audio.Start();
+            // surfaced through the status line instead of an exception. The recorder
+            // abstraction is still guarded: a throwing adapter must not stick the
+            // button on "Listening...".
+            try
+            {
+                _audio.Start();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _log.LogWarning(ex, "Recorder start failed (e.g. no mic connected).");
+                ResetRecordingState();
+                StatusText = "Mic unavailable - no recording device found.";
+                return;
+            }
+
             IsRecording = _audio.IsRecording;
             StatusText = IsRecording
                 ? "Recording - press Ctrl+Alt+Space to stop."
@@ -276,9 +307,30 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Stops the recorder and flips <see cref="IsRecording"/> off.</summary>
     private void StopRecording()
     {
-        _audio?.StopRecording();
-        IsRecording = false;
+        try
+        {
+            _audio?.StopRecording();
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _log.LogWarning(ex, "Recorder stop failed; resetting mic state anyway.");
+        }
+        finally
+        {
+            ResetRecordingState();
+        }
+
         StatusText = "Recording stopped";
+    }
+
+    /// <summary>
+    /// Resets mic state so the button never sticks on "Listening...". Called from
+    /// every error path (pipe drop, recorder failure) and from the normal stop flow.
+    /// <see cref="MicButtonText"/> follows <see cref="IsRecording"/> automatically.
+    /// </summary>
+    private void ResetRecordingState()
+    {
+        IsRecording = false;
     }
 
     /// <summary>
@@ -324,9 +376,17 @@ public sealed partial class MainViewModel : ObservableObject
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _log.LogWarning(ex, "Voice query failed.");
-            StatusText = "Voice query failed.";
+            Messages.Add(new ChatMessage(MessageRole.System, "Error: Service unreachable. Is the background service running?"));
+            StatusText = "Service unreachable";
+        }
+        finally
+        {
+            // The pipe dropped mid-transcribe: never leave the mic stuck on "Listening...".
+            ResetRecordingState();
         }
     }
 
     partial void OnIsBusyChanged(bool value) => SendCommand.NotifyCanExecuteChanged();
+
+    partial void OnIsRecordingChanged(bool value) => OnPropertyChanged(nameof(MicButtonText));
 }

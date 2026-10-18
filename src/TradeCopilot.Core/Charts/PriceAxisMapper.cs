@@ -47,8 +47,10 @@ public sealed class PriceAxisMapper
                 continue;
             }
 
-            bool isLeftAxis = word.BoundingBox.X < frameWidth * 0.15;
-            bool isRightAxis = word.BoundingBox.X > frameWidth * 0.85;
+            // TradingView keeps the price axis in a narrow gutter at the far right
+            // (or left); 0.20/0.80 tolerates OCR boxes that bleed slightly inward.
+            bool isLeftAxis = word.BoundingBox.X < frameWidth * 0.20;
+            bool isRightAxis = word.BoundingBox.X > frameWidth * 0.80;
             if (!isLeftAxis && !isRightAxis)
             {
                 continue;
@@ -133,7 +135,9 @@ public sealed class PriceAxisMapper
 
     private static Regex CreatePriceRegex()
     {
-        // Matches: 45000, 45,000, 1.05, 45,000.50
-        return new Regex(@"^[0-9]{1,3}(,[0-9]{3})*(\.[0-9]+)?$", RegexOptions.Compiled);
+        // Matches: 45000, 45,000, 1.05, 45,000.50, 23146.15 (plain decimals
+        // without commas). Either comma-grouped thousands or a bare digit run,
+        // with an optional fractional part.
+        return new Regex(@"^([0-9]{1,3}(,[0-9]{3})+|[0-9]+)(\.[0-9]+)?$", RegexOptions.Compiled);
     }
 }

@@ -111,6 +111,12 @@ public sealed class AudioCapture : IDisposable
         lock (_gate)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
+            // A previous Stop() dropped the silence hangover but kept the open
+            // utterance slice; clear it so the first chunk after Start() cannot
+            // emit a stale half-utterance from an earlier session.
+            _utteranceStart = -1;
+            _utteranceSpeechBytes = 0;
+            _silenceBytes = 0;
             if (_waveIn is not null)
             {
                 return;
@@ -298,6 +304,20 @@ public sealed class AudioCapture : IDisposable
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Empties buffered audio without emitting an utterance. Call before (re)starting
+    /// capture so a stale half-utterance from an earlier session is never emitted.
+    /// </summary>
+    public void DiscardBufferedAudio()
+    {
+        lock (_gate)
+        {
+            _utteranceStart = -1;
+            _utteranceSpeechBytes = 0;
+            _silenceBytes = 0;
+        }
     }
 
     /// <summary>Root-mean-square of a PCM16 buffer, normalized to [-1, 1].</summary>

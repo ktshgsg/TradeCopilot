@@ -88,7 +88,9 @@ over a local named pipe.
     dotnet build -c Release
     dotnet test -c Release
 
-Requires .NET SDK 8.0.4xx (pinned via global.json). 387 tests, all green.
+Requires .NET SDK 8.0.4xx (pinned via global.json). Full suite covers
+capture, OCR, rules, cache, LLM, ASR, TTS, orchestrator, privacy, and
+vision routing.
 
 ## License
 

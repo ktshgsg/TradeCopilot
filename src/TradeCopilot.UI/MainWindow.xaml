@@ -6,7 +6,7 @@
         Title="TradeCopilot" Width="420" Height="600"
         MinWidth="360" MinHeight="400"
         WindowStyle="None" ResizeMode="CanResizeWithGrip"
-        ShowInTaskbar="False" Topmost="True"
+        ShowInTaskbar="True" Topmost="True"
         AllowsTransparency="False"
         Background="#1A1A1A" Foreground="#E0E0E0"
         FontFamily="Segoe UI"
@@ -51,6 +51,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="TradeCopilot" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="#E0E0E0" />
                 <Ellipse Grid.Column="1" Width="10" Height="10" Margin="10,0,0,0" VerticalAlignment="Center"
@@ -61,7 +62,8 @@
                 <Button Grid.Column="3" Content="Resume" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
                         Command="{Binding ResumeCaptureCommand}"
                         Visibility="{Binding CaptureActive, Converter={StaticResource VisibleWhenFalse}}" />
-                <Button Grid.Column="4" Content="\u00D7" Width="32" VerticalAlignment="Center" Click="CloseButton_Click" />
+                <Button Grid.Column="4" Content="\u2014" Width="32" Margin="0,0,4,0" VerticalAlignment="Center" ToolTip="Minimize to taskbar" Click="MinimizeButton_Click" />
+                <Button Grid.Column="5" Content="\u00D7" Width="32" VerticalAlignment="Center" ToolTip="Hide to tray" Click="CloseButton_Click" />
             </Grid>
         </Border>
         <!-- Degraded-mode banner: required AI models are missing (rules + cache only). -->
@@ -137,7 +139,7 @@
                         <KeyBinding Key="Enter" Command="{Binding SendCommand}" />
                     </TextBox.InputBindings>
                 </TextBox>
-                <Button Grid.Column="1" Content="Mic" Width="48" Margin="8,0,0,0"
+                <Button Grid.Column="1" Content="{Binding MicButtonText}" Width="72" Margin="8,0,0,0"
                         IsEnabled="{Binding MicAvailable}"
                         ToolTip="Push-to-talk (Ctrl+Alt+Space): click to start/stop recording."
                         Command="{Binding ToggleRecordingCommand}" />

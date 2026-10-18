@@ -24,7 +24,7 @@ public sealed class LlamaSharpEngine : ILlmEngine, IDisposable
     public const string DefaultModelPath = "models/qwen2.5-3b-instruct-q4_k_m.gguf";
 
     private const int ContextSize = 4096;
-    private const int MaxNewTokens = 300;
+    private const int MaxNewTokens = 100;
 
     private static readonly string[] StopStrings = ["<|im_end|>", "<|endoftext|>"];
 
