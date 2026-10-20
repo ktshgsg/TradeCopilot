@@ -519,3 +519,6 @@ tools/piper/*.zip
 tools/piper/espeak-ng-data/
 .venv/
 .venv-1/
+
+# Installer publish output (installer/build.ps1)
+installer/out/

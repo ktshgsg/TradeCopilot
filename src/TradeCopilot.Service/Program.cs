@@ -9,21 +9,50 @@ using TradeCopilot.Core.Orchestrator;
 using TradeCopilot.Core.Privacy;
 using TradeCopilot.Core.Processing;
 using TradeCopilot.Core.Rules;
+using TradeCopilot.Core.Setup;
 using TradeCopilot.Core.Speech;
 using TradeCopilot.Core.Vision;
 using TradeCopilot.Service;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Resolve model/data paths (models/, tools/, data/) against the solution root
-// so they work whether the process starts from the repo root, the service
-// folder, or bin/Release. AppContext.BaseDirectory points deep into
-// bin/Release/net8.0-windows.../ so walk up to the TradeCopilot.sln marker.
-var rootPath = FindSolutionRoot(AppContext.BaseDirectory)
-    ?? FindSolutionRoot(Environment.CurrentDirectory)
-    ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
+// Resolve content root: the solution root in a dev layout (so run.ps1 keeps
+// working from any subfolder), AppContext.BaseDirectory in production (the
+// published/installed layout, where no TradeCopilot.sln exists above the
+// binaries). Model files are NOT resolved here — ModelManifest maps them to
+// %LOCALAPPDATA%\TradeCopilot\models outside a dev layout.
+string? solutionRoot = FindSolutionRoot(AppContext.BaseDirectory)
+    ?? FindSolutionRoot(Environment.CurrentDirectory);
+bool isDevLayout = solutionRoot is not null;
+string rootPath = solutionRoot ?? AppContext.BaseDirectory;
 builder.Environment.ContentRootPath = rootPath;
 Environment.CurrentDirectory = rootPath;
+if (!isDevLayout)
+{
+    // Production: relative model/data paths from appsettings must resolve to the
+    // per-user directory — Program Files is not writable without elevation, and the
+    // first-run wizard downloads into %LOCALAPPDATA%\TradeCopilot\models. Piper's
+    // executable stays install-relative (tools/piper ships next to the binaries and
+    // resolves against the working directory set above).
+    string userData = ModelManifest.UserDataDirectory;
+    Directory.CreateDirectory(Path.Combine(userData, "models"));
+    Directory.CreateDirectory(Path.Combine(userData, "data"));
+    builder.Services.PostConfigure<AgentOptions>(options =>
+    {
+        options.Models.EmbeddingPath = RebasePath(options.Models.EmbeddingPath, userData);
+        options.Models.LlmPath = RebasePath(options.Models.LlmPath, userData);
+        options.Models.WhisperPath = RebasePath(options.Models.WhisperPath, userData);
+        options.Models.PiperVoicePath = RebasePath(options.Models.PiperVoicePath, userData);
+        options.Cache.DbPath = RebasePath(options.Cache.DbPath, userData);
+    });
+}
+
+// Models a relative appsettings path (e.g. "models/x.gguf") against the per-user
+// directory; absolute paths pass through unchanged.
+static string RebasePath(string path, string baseDirectory) =>
+    Path.IsPathRooted(path)
+        ? path
+        : Path.Combine(baseDirectory, path.Replace('/', Path.DirectorySeparatorChar));
 
 // Console logging only: no file sinks. The installer can redirect stdout/stderr.
 builder.Logging.ClearProviders();

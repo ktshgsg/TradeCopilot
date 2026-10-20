@@ -54,18 +54,44 @@ public static class ModelManifest
     /// <summary>Extras that improve quality but are not needed for degraded mode to end; none yet.</summary>
     public static IReadOnlyList<ModelFile> Optional { get; } = Array.Empty<ModelFile>();
     /// <summary>
-    /// The root folder that relative TargetPath values resolve against: the working
-    /// directory when it is the app root (where <c>run.ps1</c> starts both processes),
-    /// otherwise the nearest folder at or above the working directory or the executable
-    /// that contains the solution or setup script. Falls back to the working directory
-    /// for layouts without either marker (e.g. a future install dir).
+    /// The root folder that relative TargetPath values resolve against: the repository root
+    /// when running from a dev layout (detected by the solution or setup-script marker, so
+    /// models stay under <c>{repo}\models</c>), otherwise the per-user data directory —
+    /// <c>%LOCALAPPDATA%\TradeCopilot</c> so an installed, non-admin user downloads into
+    /// <c>%LOCALAPPDATA%\TradeCopilot\models</c> (writable without elevation, unlike
+    /// <c>{app}\models</c> under Program Files). Set <c>TRADECOPILOT_HOME</c> to override
+    /// the per-user directory (the installer points the LocalSystem service at the
+    /// installing user's directory this way — a Windows service resolves
+    /// <c>%LOCALAPPDATA%</c> to the system profile instead).
     /// </summary>
     public static string DefaultBaseDirectory =>
         FindAppRoot(Environment.CurrentDirectory)
         ?? FindAppRoot(AppContext.BaseDirectory)
-        ?? Environment.CurrentDirectory;
+        ?? UserDataDirectory;
 
-    /// <summary>Resolves a manifest path against an app root (absolute paths pass through).</summary>
+    /// <summary>
+    /// The per-user data root: <c>TRADECOPILOT_HOME</c> when set (non-empty, after
+    /// trimming), otherwise <c>%LOCALAPPDATA%\TradeCopilot</c>.
+    /// </summary>
+    public static string UserDataDirectory
+    {
+        get
+        {
+            string? overrideDir = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME")?.Trim();
+            return !string.IsNullOrWhiteSpace(overrideDir)
+                ? overrideDir
+                : Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "TradeCopilot");
+        }
+    }
+
+    /// <summary>
+    /// Resolves a manifest path against a base directory (absolute paths pass through).
+    /// The base is normally <see cref="DefaultBaseDirectory"/>, which is
+    /// <c>%LOCALAPPDATA%\TradeCopilot</c> outside a dev layout, so
+    /// <c>models/…</c> targets land under <c>%LOCALAPPDATA%\TradeCopilot\models\…</c>.
+    /// </summary>
     /// <param name="file">Manifest entry.</param>
     /// <param name="baseDirectory">App root.</param>
     /// <returns>Absolute path of the target file.</returns>
