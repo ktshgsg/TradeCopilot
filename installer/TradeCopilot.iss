@@ -58,10 +58,15 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [Run]
 ; Register the background service only if it is not already installed (upgrade
 ; path). sc.exe requires the space after "create" and after "start=".
+; Note: Windows services always launch with Working Directory = System32;
+; Program.cs re-anchors it to the exe directory (Directory.SetCurrentDirectory),
+; so binPath needs no extra appdir argument.
 Filename: "{sys}\cmd.exe"; Parameters: "/c sc query {#MyAppName} >nul 2>&1 || sc create {#MyAppName} start= delayed-auto binPath= ""{app}\service\{#ServiceExeName}"" DisplayName= ""{#MyAppName} background service"""; Flags: runhidden waituntilterminated
 ; A Windows service runs as LocalSystem, whose %LOCALAPPDATA% is the system
-; profile — point the service at the installing user's per-user data directory
-; so it finds the models the first-run wizard downloads.
+; profile — explicitly point the service at the installing user's per-user
+; data directory so it finds the models the first-run wizard downloads into
+; %LOCALAPPDATA%\TradeCopilot\models. Written to the service's Environment
+; key before sc start, so the value is live for the first launch.
 Filename: "{sys}\reg.exe"; Parameters: "add ""HKLM\SYSTEM\CurrentControlSet\Services\{#MyAppName}\Environment"" /v TRADECOPILOT_HOME /t REG_SZ /d ""{localappdata}\{#MyAppName}"" /f"; Flags: runhidden waituntilterminated
 Filename: "{sys}\cmd.exe"; Parameters: "/c sc start {#MyAppName}"; Flags: runhidden waituntilterminated
 ; Launch the overlay unless the install is unattended.

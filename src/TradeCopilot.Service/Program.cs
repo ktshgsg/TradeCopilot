@@ -14,6 +14,13 @@ using TradeCopilot.Core.Speech;
 using TradeCopilot.Core.Vision;
 using TradeCopilot.Service;
 
+// Windows services start with Working Directory = C:\Windows\System32 (the SCM
+// default), which would make appsettings.json, models/, data/, and tools/
+// resolve against System32 and crash the service instantly on Start-Service.
+// Anchor the working directory to the binaries before anything else runs; the
+// dev-layout detection below then re-roots to the solution checkout when present.
+Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
 var builder = Host.CreateApplicationBuilder(args);
 
 // Resolve content root: the solution root in a dev layout (so run.ps1 keeps

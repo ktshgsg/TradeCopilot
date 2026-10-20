@@ -1,4 +1,6 @@
 using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using TradeCopilot.Core.Cache;
@@ -94,12 +96,7 @@ public sealed class PipeServer : BackgroundService
             NamedPipeServerStream? server = null;
             try
             {
-                server = new NamedPipeServerStream(
-                    _opts.Pipe.Name,
-                    PipeDirection.InOut,
-                    MaxServerInstances,
-                    PipeTransmissionMode.Byte,
-                    System.IO.Pipes.PipeOptions.Asynchronous);
+                server = CreatePipe(_opts.Pipe.Name);
                 await server.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
                 await HandleConnectionAsync(server, stoppingToken).ConfigureAwait(false);
             }
@@ -122,6 +119,35 @@ public sealed class PipeServer : BackgroundService
         }
 
         _log.LogInformation("Pipe server stopped.");
+    }
+
+    /// <summary>
+    /// Creates the next server-side pipe instance with a permissive ACL granting
+    /// Everyone full control. The service often runs elevated (LocalSystem via the
+    /// installer) while the overlay UI runs unelevated; the default pipe DACL
+    /// inherited from the process token then blocks the cross-integrity connect
+    /// with "Access is denied". Byte framing is preserved (the protocol is
+    /// newline-delimited JSON, not message-framed).
+    /// </summary>
+    /// <param name="pipeName">Pipe name.</param>
+    /// <returns>A server stream awaiting a client connection.</returns>
+    private static NamedPipeServerStream CreatePipe(string pipeName)
+    {
+        var pipeSecurity = new PipeSecurity();
+        pipeSecurity.AddAccessRule(new PipeAccessRule(
+            new SecurityIdentifier(WellKnownSidType.WorldSid, null),
+            PipeAccessRights.FullControl,
+            AccessControlType.Allow));
+
+        return NamedPipeServerStreamAcl.Create(
+            pipeName,
+            PipeDirection.InOut,
+            MaxServerInstances,
+            PipeTransmissionMode.Byte,
+            System.IO.Pipes.PipeOptions.Asynchronous,
+            inBufferSize: 0,
+            outBufferSize: 0,
+            pipeSecurity);
     }
 
     /// <summary>Reads request lines and writes one response line per request.</summary>
