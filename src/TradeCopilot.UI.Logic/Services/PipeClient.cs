@@ -12,7 +12,8 @@ namespace TradeCopilot.UI.Logic.Services;
 /// </summary>
 public sealed class PipeClient : IPipeClient, IAsyncDisposable
 {
-    private const int ConnectTimeoutMs = 2000;
+    private const int ConnectTimeoutMs = 15000;
+    private const int ConnectRetryDelayMs = 1000;
     private const int RetryDelayMs = 200;
     private const int MaxLineBytes = 1 << 20;
 
@@ -88,7 +89,7 @@ public sealed class PipeClient : IPipeClient, IAsyncDisposable
     private async Task<PipeResponse> SendOnceAsync(PipeRequest request, CancellationToken ct)
     {
         using var stream = new NamedPipeClientStream(".", _opts.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await stream.ConnectAsync(ConnectTimeoutMs, ct).ConfigureAwait(false);
+        await ConnectWithRetryAsync(stream, ConnectTimeoutMs, ConnectRetryDelayMs, ct).ConfigureAwait(false);
 
         byte[] payload = Encoding.UTF8.GetBytes(request.ToJson() + "\n");
         await stream.WriteAsync(payload, ct).ConfigureAwait(false);
@@ -96,6 +97,42 @@ public sealed class PipeClient : IPipeClient, IAsyncDisposable
 
         string line = await ReadLineAsync(stream, ct).ConfigureAwait(false);
         return PipeResponse.Parse(line);
+    }
+
+    /// <summary>
+    /// Connects to the named pipe, retrying once after a 1-second delay. The
+    /// service needs ~11 seconds to load the LLM and may not accept pipe
+    /// connections immediately after startup.
+    /// </summary>
+    private static async Task ConnectWithRetryAsync(NamedPipeClientStream stream, int connectTimeoutMs, int connectRetryDelayMs, CancellationToken ct)
+    {
+        Exception? lastError = null;
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            try
+            {
+                await stream.ConnectAsync(connectTimeoutMs, ct).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (ex is IOException or TimeoutException)
+            {
+                lastError = ex;
+                if (attempt == 0)
+                {
+                    try
+                    {
+                        await Task.Delay(connectRetryDelayMs, ct).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    continue;
+                }
+                throw;
+            }
+        }
+        throw lastError ?? new IOException("Unable to connect to the named pipe.");
     }
 
     /// <summary>Reads raw bytes until '\n' or the size cap, then decodes as UTF-8.</summary>

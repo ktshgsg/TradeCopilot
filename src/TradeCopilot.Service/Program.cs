@@ -21,6 +21,17 @@ using TradeCopilot.Service;
 // dev-layout detection below then re-roots to the solution checkout when present.
 Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
+// The service runs as NT AUTHORITY\LocalService, whose LocalApplicationData is
+// the service profile (C:\Windows\ServiceProfiles\LocalService\AppData\Local),
+// not the installing user's. The installer writes TRADECOPILOT_HOME to the
+// service's Environment key pointing at the user's %LOCALAPPDATA%\TradeCopilot;
+// rely on it so model/data paths resolve to a shared, writable location.
+var customHome = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME");
+if (!string.IsNullOrEmpty(customHome))
+{
+    Environment.SetEnvironmentVariable("TRADECOPILOT_HOME", customHome);
+}
+
 var builder = Host.CreateApplicationBuilder(args);
 
 // Resolve content root: the solution root in a dev layout (so run.ps1 keeps

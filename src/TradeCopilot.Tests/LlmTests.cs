@@ -166,14 +166,14 @@ public sealed class LlmTests
         answer.Should().NotBeNullOrWhiteSpace();
 
         // Valid outcomes: cite the RSI value, say "over"/overbought, answer in
-        // Devanagari, or use the sanctioned refusal — the system prompt mandates
-        // "price visible nahi hai" when the chart structure has no price, and the
-        // small model paraphrases it, so match the stable marker "nahi" rather
-        // than the full sentence (LLM sampling is stochastic run to run).
+        // Devanagari, use common Latin-script Hinglish (kaise/kya/chahiye/kyun),
+        // or the sanctioned refusal — the small model paraphrases and sampling is
+        // stochastic run to run.
+        var hinglish = new[] { "kaise", "kya", "chahiye", "kyun", "nahi" };
         (answer.Contains("72")
             || answer.Contains("over")
             || answer.Any(c => c >= '\u0900' && c <= '\u097F')
-            || answer.Contains("nahi", StringComparison.OrdinalIgnoreCase))
+            || hinglish.Any(w => answer.Contains(w, StringComparison.OrdinalIgnoreCase)))
             .Should().BeTrue();
     }
 

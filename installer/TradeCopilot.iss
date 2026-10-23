@@ -58,11 +58,17 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 [Run]
 ; Register the background service only if it is not already installed (upgrade
 ; path). sc.exe requires the space after "create" and after "start=".
+; Runs as NT AUTHORITY\LocalService so the service has an identity that can be
+; granted access to user data without full LocalSystem privileges.
 ; Note: Windows services always launch with Working Directory = System32;
 ; Program.cs re-anchors it to the exe directory (Directory.SetCurrentDirectory),
 ; so binPath needs no extra appdir argument.
-Filename: "{sys}\cmd.exe"; Parameters: "/c sc query {#MyAppName} >nul 2>&1 || sc create {#MyAppName} start= delayed-auto binPath= ""{app}\service\{#ServiceExeName}"" DisplayName= ""{#MyAppName} background service"""; Flags: runhidden waituntilterminated
-; A Windows service runs as LocalSystem, whose %LOCALAPPDATA% is the system
+Filename: "{sys}\cmd.exe"; Parameters: "/c sc query {#MyAppName} >nul 2>&1 || sc create {#MyAppName} binPath= ""{app}\service\{#ServiceExeName}"" obj= ""NT AUTHORITY\LocalService"" start= delayed-auto DisplayName= ""{#MyAppName} background service"""; Flags: runhidden waituntilterminated
+; Grant LocalService full access to the per-user models/data folder so the
+; service (which cannot reach %LOCALAPPDATA% of the installing user by default)
+; can read downloaded models and write the cache database.
+Filename: "{sys}\cmd.exe"; Parameters: "/c icacls ""{localappdata}\{#MyAppName}"" /grant ""NT AUTHORITY\LocalService:(OI)(CI)F"" /T"; Flags: runhidden waituntilterminated
+; A Windows service runs as LocalService, whose %LOCALAPPDATA% is the service
 ; profile — explicitly point the service at the installing user's per-user
 ; data directory so it finds the models the first-run wizard downloads into
 ; %LOCALAPPDATA%\TradeCopilot\models. Written to the service's Environment
