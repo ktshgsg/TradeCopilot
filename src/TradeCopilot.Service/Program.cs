@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using TradeCopilot.Core.Cache;
 using TradeCopilot.Core.Capture;
 using TradeCopilot.Core.Charts;
@@ -34,10 +34,20 @@ if (!string.IsNullOrEmpty(customHome))
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Override cache path to live under TRADECOPILOT_HOME so the LocalService
+// writes to a writable per-user directory, not Program Files.
+var home = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME");
+if (!string.IsNullOrEmpty(home))
+{
+    var dataDir = Path.Combine(home, "data");
+    Directory.CreateDirectory(dataDir);
+    builder.Configuration["Cache:DbPath"] = Path.Combine(dataDir, "cache.db");
+}
+
 // Resolve content root: the solution root in a dev layout (so run.ps1 keeps
 // working from any subfolder), AppContext.BaseDirectory in production (the
 // published/installed layout, where no TradeCopilot.sln exists above the
-// binaries). Model files are NOT resolved here — ModelManifest maps them to
+// binaries). Model files are NOT resolved here â€” ModelManifest maps them to
 // %LOCALAPPDATA%\TradeCopilot\models outside a dev layout.
 string? solutionRoot = FindSolutionRoot(AppContext.BaseDirectory)
     ?? FindSolutionRoot(Environment.CurrentDirectory);
@@ -48,7 +58,7 @@ Environment.CurrentDirectory = rootPath;
 if (!isDevLayout)
 {
     // Production: relative model/data paths from appsettings must resolve to the
-    // per-user directory — Program Files is not writable without elevation, and the
+    // per-user directory â€” Program Files is not writable without elevation, and the
     // first-run wizard downloads into %LOCALAPPDATA%\TradeCopilot\models. Piper's
     // executable stays install-relative (tools/piper ships next to the binaries and
     // resolves against the working directory set above).
@@ -130,9 +140,16 @@ builder.Services.AddSingleton<AudioCapture>(sp => new AudioCapture(
 
 builder.Services.AddSingleton<IWindowFilter>(_ => new WindowFilter());
 builder.Services.AddSingleton<IAuditSink>(sp =>
-    new AuditLog(
-        Path.Combine(AppContext.BaseDirectory, "data", "audit.log"),
-        sp.GetRequiredService<ILogger<AuditLog>>()));
+{
+    var auditHome = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME");
+    var auditDir = !string.IsNullOrEmpty(auditHome)
+        ? Path.Combine(auditHome, "data")
+        : Path.Combine(AppContext.BaseDirectory, "data");
+    Directory.CreateDirectory(auditDir);
+    return new AuditLog(
+        Path.Combine(auditDir, "audit.log"),
+        sp.GetRequiredService<ILogger<AuditLog>>());
+});
 builder.Services.AddSingleton(sp => sp.GetRequiredService<AgentOptions>().Privacy);
 builder.Services.AddSingleton<PrivacyGateCounters>();
 
@@ -173,3 +190,4 @@ static string? FindSolutionRoot(string start)
 
     return null;
 }
+
