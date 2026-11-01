@@ -141,10 +141,9 @@ builder.Services.AddSingleton<AudioCapture>(sp => new AudioCapture(
 builder.Services.AddSingleton<IWindowFilter>(_ => new WindowFilter());
 builder.Services.AddSingleton<IAuditSink>(sp =>
 {
-    var auditHome = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME");
-    var auditDir = !string.IsNullOrEmpty(auditHome)
-        ? Path.Combine(auditHome, "data")
-        : Path.Combine(AppContext.BaseDirectory, "data");
+    var auditHome = Environment.GetEnvironmentVariable("TRADECOPILOT_HOME")
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TradeCopilot");
+    var auditDir = Path.Combine(auditHome, "data");
     Directory.CreateDirectory(auditDir);
     return new AuditLog(
         Path.Combine(auditDir, "audit.log"),
