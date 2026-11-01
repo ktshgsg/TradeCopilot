@@ -92,6 +92,14 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>Raised when the tray menu asks the shell to reveal the audit log folder.</summary>
     public event Action? OpenAuditLogRequested;
 
+    /// <summary>Raised when the user asks to open the model downloader wizard.</summary>
+#pragma warning disable CS0067 // Event is raised from TradeCopilot.UI (cross-assembly)
+    public event Action? DownloadModelsRequested;
+#pragma warning restore CS0067
+
+    /// <summary>Raises <see cref="DownloadModelsRequested"/>.</summary>
+    public void RequestDownloadModels() => DownloadModelsRequested?.Invoke();
+
     /// <summary>
     /// Sends the input text as a query and appends the answer. No-ops on empty input or while busy.
     /// </summary>

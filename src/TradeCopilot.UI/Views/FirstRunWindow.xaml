@@ -61,8 +61,9 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
                 <Button Content="Cancel" Width="90" Padding="10,6" Margin="0,0,10,0"
                         Command="{Binding CancelCommand}" />
-                <Button Content="Skip for now" Width="110" Padding="10,6" Margin="0,0,10,0"
-                        Command="{Binding SkipCommand}" />
+                <Button Content="Exit" Width="110" Padding="10,6" Margin="0,0,10,0"
+                        Command="{Binding SkipCommand}"
+                        Click="ExitButton_Click" />
                 <Button Content="Continue" Width="110" Padding="10,6"
                         Background="#4A9EFF" Foreground="White"
                         IsEnabled="{Binding AllComplete}" Command="{Binding ContinueCommand}" />

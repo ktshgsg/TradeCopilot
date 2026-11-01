@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Windows;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using TradeCopilot.Core.Setup;
 using TradeCopilot.Core.Speech;
@@ -63,6 +62,7 @@ public partial class App : Application
         services.AddTransient(sp => new FirstRunViewModel(
             sp.GetRequiredService<ModelDownloader>(),
             NullLogger<FirstRunViewModel>.Instance));
+        services.AddTransient<FirstRunWindow>();
         services.AddTransient(_ => new ConsentWindow(ConsentGate.DefaultFlagPath));
         // Singleton: the overlay and the Settings dialog resolve the SAME instance so
         // the push-to-talk toggle and the chat state stay in sync. A second resolve must
@@ -92,27 +92,23 @@ public partial class App : Application
             }
         }
 
-        // First-run models: show the downloader wizard once (flag file missing and
-        // models absent). Afterwards a missing model set puts the overlay in degraded
-        // mode with a persistent banner.
+        // Hard block: models must be present before the overlay opens.
         var firstRun = _services.GetRequiredService<FirstRunViewModel>();
-        bool modelsPresent = ModelManifest.AllPresent(firstRun.BaseDirectory);
-        if (FirstRunGate.ShouldShow(FirstRunGate.DefaultFlagPath, modelsPresent))
+        if (!ModelManifest.AllPresent(firstRun.BaseDirectory))
         {
             var wizard = new FirstRunWindow(firstRun);
             wizard.ShowDialog();
-            modelsPresent = ModelManifest.AllPresent(firstRun.BaseDirectory);
+            if (!ModelManifest.AllPresent(firstRun.BaseDirectory))
+            {
+                Shutdown();
+                return;
+            }
         }
 
         var viewModel = _services.GetRequiredService<MainViewModel>();
-        if (!modelsPresent)
-        {
-            NullLogger<App>.Instance.LogWarning("Running in degraded mode: required AI models are missing; rules and cache only.");
-            viewModel.DegradedMode = true;
-        }
-
         var window = new MainWindow(viewModel);
         MainWindow = window;
+        viewModel.DownloadModelsRequested += () => OpenDownloadModels(window);
         viewModel.OpenSettingsRequested += () => OpenSettings(window);
         viewModel.OpenAuditLogRequested += OpenAuditLogFolder;
         window.Show();
@@ -130,6 +126,20 @@ public partial class App : Application
         var settings = _services.GetRequiredService<SettingsWindow>();
         settings.Owner = owner;
         settings.ShowDialog();
+    }
+
+    /// <summary>Shows the model downloader wizard modally, owned by the overlay.</summary>
+    /// <param name="owner">Overlay window.</param>
+    private void OpenDownloadModels(Window owner)
+    {
+        if (_services is null)
+        {
+            return;
+        }
+
+        var wizard = _services.GetRequiredService<FirstRunWindow>();
+        wizard.Owner = owner;
+        wizard.ShowDialog();
     }
 
     /// <summary>

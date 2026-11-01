@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using TradeCopilot.Core.Setup;
 using TradeCopilot.UI.Logic.ViewModels;
 
 namespace TradeCopilot.UI.Views;
@@ -13,6 +14,7 @@ namespace TradeCopilot.UI.Views;
 public partial class FirstRunWindow : Window
 {
     private readonly FirstRunViewModel _viewModel;
+    private bool _exitRequested;
 
     /// <summary>Creates the wizard.</summary>
     /// <param name="viewModel">Bound downloader view model.</param>
@@ -36,7 +38,20 @@ public partial class FirstRunWindow : Window
     /// <summary>Cancels downloads when the user closes with the X button (partial files stay).</summary>
     /// <param name="sender">Window.</param>
     /// <param name="e">Cancel event.</param>
-    private void FirstRunWindow_Closing(object? sender, CancelEventArgs e) => _viewModel.CancelDownloads();
+    private void FirstRunWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        _viewModel.CancelDownloads();
+        // Hard block: the X button cannot dismiss the wizard unless every model
+        // is already present. Only the explicit "Exit" button may close with
+        // models missing (the caller then shuts the app down).
+        if (!_exitRequested && !ModelManifest.AllPresent(_viewModel.BaseDirectory))
+        {
+            e.Cancel = true;
+        }
+    }
+
+    /// <summary>Marks an explicit user exit so the Closing handler allows the window to close.</summary>
+    private void ExitButton_Click(object sender, RoutedEventArgs e) => _exitRequested = true;
 
     /// <summary>Closes the modal when the view model signals completion, skip, or cancel.</summary>
     private void ViewModel_CloseRequested() => Close();

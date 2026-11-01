@@ -224,6 +224,10 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Hide();
 
+    /// <summary>Opens the model downloader wizard so the user can re-download or repair models.</summary>
+    private void DownloadModelsButton_Click(object sender, RoutedEventArgs e) =>
+        _viewModel.RequestDownloadModels();
+
     /// <summary>Minimizes to the taskbar (the window uses ShowInTaskbar so it can be restored from there).</summary>
     private void MinimizeButton_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 

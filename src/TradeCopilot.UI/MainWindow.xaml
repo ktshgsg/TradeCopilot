@@ -52,18 +52,21 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="TradeCopilot" FontWeight="Bold" FontSize="14" VerticalAlignment="Center" Foreground="#E0E0E0" />
                 <Ellipse Grid.Column="1" Width="10" Height="10" Margin="10,0,0,0" VerticalAlignment="Center"
                          Fill="{Binding CaptureActive, Converter={StaticResource CaptureBrush}}" />
-                <Button Grid.Column="3" Content="Pause" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
+                <Button Grid.Column="3" Content="Download Models" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
+                        Click="DownloadModelsButton_Click" />
+                <Button Grid.Column="4" Content="Pause" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
                         Command="{Binding PauseCaptureCommand}"
                         Visibility="{Binding CaptureActive, Converter={StaticResource VisibleWhenTrue}}" />
-                <Button Grid.Column="3" Content="Resume" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
+                <Button Grid.Column="4" Content="Resume" Padding="10,4" Margin="0,0,4,0" VerticalAlignment="Center"
                         Command="{Binding ResumeCaptureCommand}"
                         Visibility="{Binding CaptureActive, Converter={StaticResource VisibleWhenFalse}}" />
-                <Button Grid.Column="4" Content="\u2014" Width="32" Margin="0,0,4,0" VerticalAlignment="Center" ToolTip="Minimize to taskbar" Click="MinimizeButton_Click" />
-                <Button Grid.Column="5" Content="\u00D7" Width="32" VerticalAlignment="Center" ToolTip="Hide to tray" Click="CloseButton_Click" />
+                <Button Grid.Column="5" Content="\u2014" Width="32" Margin="0,0,4,0" VerticalAlignment="Center" ToolTip="Minimize to taskbar" Click="MinimizeButton_Click" />
+                <Button Grid.Column="6" Content="\u00D7" Width="32" VerticalAlignment="Center" ToolTip="Hide to tray" Click="CloseButton_Click" />
             </Grid>
         </Border>
         <!-- Degraded-mode banner: required AI models are missing (rules + cache only). -->
